@@ -81,8 +81,9 @@ Frontend will run on http://localhost:3000
 
 ## 🔐 Default Admin Credentials
 
-Email: admin@ganpatihandloom.com
-Password: Admin@123
+🔐 Admin Credentials
+
+Admin access is securely managed via environment variables in production.
 
 (Change these in production!)
 
