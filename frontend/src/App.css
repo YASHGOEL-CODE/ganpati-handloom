@@ -1,0 +1,36 @@
+/* Additional custom styles */
+
+.gradient-text {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
+}
+
+.card-shadow:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.btn-primary {
+  @apply bg-saffron-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-saffron-700 transition-colors duration-300;
+}
+
+.btn-secondary {
+  @apply bg-deepgreen-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-deepgreen-700 transition-colors duration-300;
+}
+
+.input-field {
+  @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-saffron-500 dark:bg-gray-700 dark:text-white transition-all duration-300;
+}
+
+/* Animated background patterns */
+.handloom-pattern {
+  background-image: 
+    repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(249, 115, 22, 0.05) 35px, rgba(249, 115, 22, 0.05) 70px),
+    repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(34, 197, 94, 0.05) 35px, rgba(34, 197, 94, 0.05) 70px);
+}

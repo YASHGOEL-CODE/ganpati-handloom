@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://www.ganpatihandloom.com/sitemap.xml
