@@ -85,7 +85,7 @@ Frontend will run on http://localhost:3000
 
 Admin access is securely managed via environment variables in production.
 
-(Change these in production!)
+
 
 ## 📁 Project Structure
 ```
