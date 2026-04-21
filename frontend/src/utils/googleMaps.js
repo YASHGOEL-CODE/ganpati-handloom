@@ -1,6 +1,6 @@
 // Use backend proxy to avoid CORS issues
 
-const API_BASE = 'http://localhost:5000/api/geocoding';
+const API_BASE = `${process.env.REACT_APP_API_URL}/geocoding`;
 
 // Get current location from browser
 export const getCurrentLocation = () => {

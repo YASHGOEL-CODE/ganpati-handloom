@@ -108,7 +108,7 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     try {
       console.log('🔄 Reverse geocoding:', { lat, lng });
 
-      const response = await fetch('http://localhost:5000/api/geocoding/reverse', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ latitude: lat, longitude: lng }),

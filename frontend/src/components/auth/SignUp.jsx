@@ -43,7 +43,7 @@ const SignUp = () => {
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
     setLoading(true); setErrors({});
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName: formData.fullName, email: formData.email, password: formData.password, phone: formData.phone }),

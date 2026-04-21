@@ -1,9 +1,7 @@
 import axios from 'axios';
 import { apiCache } from '../utils/cache';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-const API_URL = `${BASE_URL}/api`;
-
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 // Create axios instance for public routes (with /api prefix)
 const api = axios.create({
   baseURL: API_URL,
@@ -38,7 +36,7 @@ api.interceptors.response.use(
 
 // ✅ Create separate axios instance for admin routes (WITHOUT /api prefix)
 const adminAxios = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+  baseURL: (process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', ''),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -266,13 +264,12 @@ export const adminAPI = {
   toggleCoupon: (id)       => adminAxios.patch(`/admin/coupons/${id}/toggle`),
 
   // ✅ Festive Collections (Admin)
-  getAllFestiveCollections:    ()         => adminAxios.get('/api/festive-collections'),
-  createFestiveCollection:    (data)     => adminAxios.post('/api/festive-collections', data),
-  updateFestiveCollection:    (id, data) => adminAxios.put(`/api/festive-collections/${id}`, data),
-  deleteFestiveCollection:    (id)       => adminAxios.delete(`/api/festive-collections/${id}`),
-  toggleFestiveCollection:    (id)       => adminAxios.patch(`/api/festive-collections/${id}/toggle`),
-  // Upload local banner image — multipart/form-data
-  uploadFestiveImage: (formData) => adminAxios.post('/api/festive-collections/upload-image', formData, {
+  getAllFestiveCollections: () => adminAxios.get('/festive-collections'),
+createFestiveCollection: (data) => adminAxios.post('/festive-collections', data),
+updateFestiveCollection: (id, data) => adminAxios.put(`/festive-collections/${id}`, data),
+deleteFestiveCollection: (id) => adminAxios.delete(`/festive-collections/${id}`),
+toggleFestiveCollection: (id) => adminAxios.patch(`/festive-collections/${id}/toggle`),
+uploadFestiveImage: (formData) => adminAxios.post('/festive-collections/upload-image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
 };
