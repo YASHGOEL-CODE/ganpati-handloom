@@ -144,6 +144,7 @@ app.set('trust proxy', 1);
 // ✅ PRO-LEVEL CORS CONFIGURATION (SAFE)
 // ============================================
 const allowedOrigins = [
+  "http://localhost:3000",
   "http://localhost:5173", // Local frontend
   process.env.CLIENT_URL   // Production frontend (Vercel)
 ].filter(Boolean);
