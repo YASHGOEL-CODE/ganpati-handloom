@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../services/api';
-import { FiSearch, FiLock, FiUnlock, FiTrash2, FiUsers, FiUserCheck, FiUserX } from 'react-icons/fi';
+import { FiSearch, FiLock, FiUnlock, FiTrash2, FiUsers, FiUserCheck } from 'react-icons/fi';
 
 /* ── Avatar with gradient initials ── */
 const Avatar = ({ name }) => {
@@ -72,7 +72,6 @@ const AdminUsers = () => {
 
   // Quick stats
   const activeCount  = users.filter(u => u.isActive).length;
-  const blockedCount = users.filter(u => !u.isActive).length;
   const weekAgo      = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const newThisWeek  = users.filter(u => new Date(u.createdAt) > weekAgo).length;
 
