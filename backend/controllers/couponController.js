@@ -26,15 +26,23 @@ const calcDiscount = (coupon, cartTotal) => {
   return Math.min(Math.round(discount), cartTotal);
 };
 
-/* ── helper: how many times has this specific user used this coupon ── */
+/* ── helper: how many times has this specific user used this coupon ──
+   Handles both legacy [ObjectId] format and current [{userId, count}] format ── */
 const getUserUsageCount = (coupon, userId) => {
-  const entry = coupon.usedBy.find(
-    (u) => u.userId.toString() === userId.toString()
-  );
-  return entry ? entry.count : 0;
+  if (!coupon.usedBy || coupon.usedBy.length === 0) return 0;
+  const first = coupon.usedBy[0];
+  // New format: [{userId, count}]
+  if (first && typeof first === 'object' && first.userId) {
+    const entry = coupon.usedBy.find(
+      (u) => u.userId.toString() === userId.toString()
+    );
+    return entry ? (entry.count || 1) : 0;
+  }
+  // Legacy format: [ObjectId] — count how many times this userId appears
+  return coupon.usedBy.filter((id) => id.toString() === userId.toString()).length;
 };
 
-/* ── helper: has this user exceeded their per-user usage limit ── */
+/* ── helper: has THIS user hit their personal usage limit for this coupon ── */
 const hasUserExceededLimit = (coupon, userId) => {
   // usageLimit = per-user cap (null = unlimited per user)
   if (coupon.usageLimit === null || coupon.usageLimit === undefined) return false;
@@ -215,9 +223,23 @@ const markCouponUsed = async (req, res) => {
     // Increment total usage count (analytics only)
     coupon.usedCount += 1;
 
+    // Migrate legacy [ObjectId] format to [{userId, count}] if needed
+    if (coupon.usedBy.length > 0) {
+      const first = coupon.usedBy[0];
+      if (first && typeof first === 'object' && !first.userId) {
+        // Legacy format — convert entire array
+        const idStrings = coupon.usedBy.map(id => id.toString());
+        const counts = {};
+        for (const id of idStrings) counts[id] = (counts[id] || 0) + 1;
+        coupon.usedBy = Object.entries(counts).map(([uid, cnt]) => ({
+          userId: uid, count: cnt,
+        }));
+      }
+    }
+
     // Increment per-user count (or add user if first use)
     const userEntry = coupon.usedBy.find(
-      (u) => u.userId.toString() === userId.toString()
+      (u) => u.userId && u.userId.toString() === userId.toString()
     );
     if (userEntry) {
       userEntry.count += 1;
