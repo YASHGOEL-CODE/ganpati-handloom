@@ -2,7 +2,7 @@ const Product = require('../models/Product');
 const User = require('../models/User');
 
 // @desc    Get all products with filtering, sorting, pagination
-// @route   GET /api/products
+// @route   GET /products
 // @access  Public
 const getProducts = async (req, res) => {
   try {
@@ -122,7 +122,7 @@ if (req.query.keyword) {
 };
 
 // @desc    Get single product by ID
-// @route   GET /api/products/:id
+// @route   GET /products/:id
 // @access  Public
 const getProductById = async (req, res) => {
   try {
@@ -163,7 +163,7 @@ const getProductById = async (req, res) => {
 };
 
 // @desc    Get featured products
-// @route   GET /api/products/featured/list
+// @route   GET /products/featured/list
 // @access  Public
 const getFeaturedProducts = async (req, res) => {
   try {
@@ -179,7 +179,7 @@ const getFeaturedProducts = async (req, res) => {
 };
 
 // @desc    Get trending products
-// @route   GET /api/products/trending/list
+// @route   GET /products/trending/list
 // @access  Public
 const getTrendingProducts = async (req, res) => {
   try {
@@ -195,7 +195,7 @@ const getTrendingProducts = async (req, res) => {
 };
 
 // @desc    Get products by collection
-// @route   GET /api/products/collection/:collectionName
+// @route   GET /products/collection/:collectionName
 // @access  Public
 const getProductsByCollection = async (req, res) => {
   try {

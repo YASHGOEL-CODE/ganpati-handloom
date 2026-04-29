@@ -96,13 +96,12 @@ const Checkout = () => {
   const [activeStep, setActiveStep]                       = useState('address');
   const [ripples, addRipple]                              = useRipple();
 
-  // ── Coupon state — appliedCoupon comes from CartContext (shared with Cart page) ──
+  // ── Coupon state — unchanged ──
   const [couponError,      setCouponError] = useState('');
   const [couponValid,      setCouponValid] = useState(!!appliedCoupon);
   const [validatingCoupon, setValidating]  = useState(false);
 
-  // ── Revalidate coupon with backend on mount ──
-  // appliedCoupon already loaded from CartContext (persisted via localStorage)
+  // ── Revalidate coupon with backend on mount — unchanged ──
   useEffect(() => {
     if (!appliedCoupon || !user) {
       setCouponValid(false);
@@ -121,14 +120,12 @@ const Checkout = () => {
         if (res.data.valid) {
           setCouponValid(true);
         } else {
-          // Server says invalid — clear from context + localStorage
           clearCoupon();
           setCouponValid(false);
           setCouponError(res.data.message || 'Coupon is no longer valid');
           setTimeout(() => setCouponError(''), 5000);
         }
       } catch (_) {
-        // Network error — optimistically keep coupon, mark as valid if it was
         setCouponValid(!!appliedCoupon);
       } finally {
         setValidating(false);
@@ -137,9 +134,9 @@ const Checkout = () => {
 
     revalidate();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // run once on mount after user is available
+  }, [user]);
 
-  // ── Remove coupon ──
+  // ── Remove coupon — unchanged ──
   const handleRemoveCoupon = () => {
     clearCoupon();
     setCouponValid(false);
@@ -175,23 +172,32 @@ const Checkout = () => {
     loadAddresses();
   }, []);
 
-  // ── Calculations — subtotal/shipping unchanged; total includes coupon discount ──
+  // ── Calculations — unchanged ──
   const calculateSubtotal = () => !cart?.items ? 0 : cart.items.reduce((t, i) => t + i.price * i.quantity, 0);
   const calculateShipping = () => deliveryInfo?.charge ?? 0;
   const calculateDiscount = () => (couponValid && appliedCoupon) ? (appliedCoupon.discount || 0) : 0;
   const calculateTotal    = () => Math.max(0, calculateSubtotal() + calculateShipping() - calculateDiscount());
 
-  // ── Place Order — marks coupon used AFTER successful order ──
+  // ── Place Order ──
   const handlePlaceOrder = async (e) => {
     addRipple(e);
     if (!selectedAddress) { alert('Please select a delivery address'); return; }
     if (!isLocationServiceable) { alert('Cannot deliver to this location'); return; }
 
+    // ── ADDED: Frontend stock guard before hitting the API ──
+    for (const item of cart.items) {
+      if (item.stock !== undefined && item.quantity > item.stock) {
+        alert(`"${item.name}" only has ${item.stock} unit(s) in stock. Please update your cart.`);
+        return;
+      }
+    }
+    // ── End stock guard ──
+
     setLoading(true);
     try {
       const subtotal = calculateSubtotal();
 
-      // Re-validate coupon one final time before placing order
+      // Re-validate coupon one final time — unchanged
       let finalDiscount = 0;
       if (appliedCoupon && couponValid) {
         const revalRes = await api.post('/coupons/revalidate', {
@@ -201,7 +207,6 @@ const Checkout = () => {
         if (revalRes.data.valid) {
           finalDiscount = revalRes.data.discount;
         } else {
-          // Coupon became invalid between validation and placing order
           clearCoupon();
           setCouponValid(false);
           setCouponError(revalRes.data.message || 'Coupon expired. Order placed without discount.');
@@ -224,12 +229,12 @@ const Checkout = () => {
         shippingPrice:   shippingCharge,
         totalPrice:      Math.max(0, subtotal + shippingCharge - finalDiscount),
 
-        // ✅ Delivery fields (from deliveryInfo state — required by Order schema)
+        // Delivery fields — unchanged
         deliveryDistance: deliveryInfo?.distance  ?? 0,
         deliveryCharge:   deliveryInfo?.charge    ?? shippingCharge,
         isServiceable:    isLocationServiceable,
 
-        // ✅ Coupon fields — saved permanently in DB
+        // Coupon fields — unchanged
         ...(appliedCoupon && couponValid && {
           couponCode:     appliedCoupon.code,
           discountAmount: finalDiscount,
@@ -238,17 +243,16 @@ const Checkout = () => {
 
       const response = await ordersAPI.create(orderData);
       if (response.data.success) {
-        // Mark coupon as used ONLY after order is successfully placed
+        // Mark coupon used — unchanged
         if (appliedCoupon && couponValid) {
           try {
             await api.post('/coupons/mark-used', { code: appliedCoupon.code });
           } catch (_) {
-            // Non-critical — usage tracking failure shouldn't block the user
             console.warn('Failed to mark coupon used');
           }
         }
 
-        // clearCart() in CartContext also calls clearCoupon() internally
+        // clearCart() also calls clearCoupon() internally — unchanged
         clearCart();
         navigate(`/orders/${response.data.order._id}`);
         alert('✅ Order placed successfully!');
@@ -505,7 +509,6 @@ const Checkout = () => {
         .co-sum-total-lbl { font-size:15px; font-weight:700; color:#f1f5f9; }
         .co-sum-total-val { font-size:28px; font-weight:800; background:linear-gradient(90deg,#fb923c,#f97316); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; transition: all .3s ease; }
 
-        /* Coupon applied row in summary */
         .co-coupon-applied {
           display:flex; align-items:center; justify-content:space-between;
           background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.20);
@@ -516,9 +519,7 @@ const Checkout = () => {
         .co-coupon-save { font-size:11.5px; color:rgba(74,222,128,0.65); }
         .co-coupon-remove { background:none; border:none; color:rgba(248,113,113,0.65); cursor:pointer; padding:3px; transition:color .2s; }
         .co-coupon-remove:hover { color:#f87171; }
-        /* Coupon error in checkout */
         .co-coupon-err { font-size:12.5px; color:#f87171; background:rgba(239,68,68,0.10); border:1px solid rgba(239,68,68,0.22); border-radius:9px; padding:9px 12px; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
-        /* Validating indicator */
         .co-coupon-validating { font-size:12px; color:rgba(255,255,255,0.38); margin-bottom:10px; display:flex; align-items:center; gap:7px; }
 
         .co-cod { display:flex; align-items:center; justify-content:center; gap:7px; background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.18); border-radius:11px; padding:11px; margin-bottom:18px; font-size:13px; font-weight:700; color:#4ade80; }
@@ -675,11 +676,10 @@ const Checkout = () => {
               </Section>
             </div>
 
-            {/* ── STICKY SUMMARY ── */}
+            {/* ── STICKY SUMMARY — unchanged ── */}
             <div className="co-summary">
               <h2 className="co-sum-title"><FiZap size={18} color="#fb923c" /> Order Summary</h2>
 
-              {/* Coupon status in summary */}
               {couponError && (
                 <div className="co-coupon-err">
                   <FiAlertCircle size={13} /> {couponError}

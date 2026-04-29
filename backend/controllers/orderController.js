@@ -1,6 +1,7 @@
 // backend/controllers/orderController.js
-const Order  = require('../models/Order');
-const Coupon = require('../models/Coupon');
+const Order   = require('../models/Order');
+const Coupon  = require('../models/Coupon');
+const Product = require('../models/Product');
 
 // ─── Helper: server-side coupon discount calculation ───────────────────────
 const calcCouponDiscount = (coupon, itemsTotal) => {
@@ -11,40 +12,17 @@ const calcCouponDiscount = (coupon, itemsTotal) => {
   } else {
     discount = coupon.discountValue;
   }
-  return Math.min(Math.round(discount), itemsTotal); // never exceed cart total
+  return Math.min(Math.round(discount), itemsTotal);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc   Create new order
-// @route  POST /api/orders
-// @access Private
-//
-// Payload sent by Checkout.jsx:
-// {
-//   orderItems:      [{product, name, image, price, quantity}],
-//   shippingAddress: selectedAddress (raw DB address object),
-//   shippingPrice:   number (from deliveryInfo.charge),
-//   totalPrice:      number (already discounted by frontend),
-//   couponCode:      string | undefined,
-//   discountAmount:  number | undefined,
-//   deliveryDistance: number (sent separately from deliveryInfo),
-//   deliveryCharge:   number,
-//   isServiceable:    boolean,
-// }
-//
-// NOTE: The frontend sends shippingAddress as the raw address object from DB.
-// Delivery fields (deliveryDistance, deliveryCharge, isServiceable) are sent
-// as top-level fields alongside shippingAddress.
-// ─────────────────────────────────────────────────────────────────────────────
 const createOrder = async (req, res) => {
   try {
     const {
       orderItems,
       shippingAddress,
       shippingPrice    = 0,
-      couponCode,         // ← sent by Checkout.jsx when coupon is applied
-      discountAmount: frontendDiscount, // ← frontend hint; we re-verify server-side
-      // Delivery fields sent as top-level (set by frontend from deliveryInfo)
+      couponCode,
+      discountAmount: frontendDiscount,
       deliveryDistance = 0,
       deliveryCharge,
       isServiceable    = true,
@@ -58,13 +36,35 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Shipping address required' });
     }
 
-    // ── 2. Calculate items subtotal from actual prices ───────────────────────
+    // ── 2. Validate stock for every item ─────────────────────────────────────
+    const productIds  = orderItems.map((item) => item.product);
+    const productDocs = await Product.find({ _id: { $in: productIds } }).select('_id name stock');
+    const productMap  = {};
+    productDocs.forEach((p) => { productMap[p._id.toString()] = p; });
+
+    for (const item of orderItems) {
+      const prod = productMap[item.product?.toString()];
+      if (!prod) {
+        return res.status(404).json({
+          success: false,
+          message: `Product not found: ${item.name || item.product}`,
+        });
+      }
+      if (prod.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for "${prod.name}". Available: ${prod.stock}, Requested: ${item.quantity}`,
+        });
+      }
+    }
+
+    // ── 3. Calculate items subtotal ──────────────────────────────────────────
     const itemsSubtotal = orderItems.reduce(
       (sum, item) => sum + Number(item.price) * Number(item.quantity),
       0
     );
 
-    // ── 3. Re-validate coupon SERVER-SIDE (never blindly trust frontend) ─────
+    // ── 4. Re-validate coupon SERVER-SIDE ────────────────────────────────────
     let verifiedDiscount   = 0;
     let verifiedCouponCode = null;
 
@@ -77,7 +77,6 @@ const createOrder = async (req, res) => {
         const now    = new Date();
         const userId = req.user._id;
 
-        // Basic coupon validity (active, not expired, min order met)
         const basicValid =
           coupon &&
           coupon.isActive &&
@@ -85,13 +84,11 @@ const createOrder = async (req, res) => {
           itemsSubtotal >= coupon.minOrderValue;
 
         if (basicValid) {
-          // ✅ Per-user usage check: usageLimit = how many times THIS user can use it
-          // (null = unlimited per user)
           let userCount = 0;
           const userEntry = coupon.usedBy.find(u => u.userId.toString() === userId.toString());
           if (userEntry) userCount = userEntry.count;
 
-          const perUserLimit   = coupon.usageLimit ?? null; // null = unlimited
+          const perUserLimit   = coupon.usageLimit ?? null;
           const userUnderLimit = perUserLimit === null || userCount < perUserLimit;
 
           if (userUnderLimit) {
@@ -100,33 +97,28 @@ const createOrder = async (req, res) => {
           }
         }
       } catch (couponErr) {
-        // Non-fatal: if coupon lookup fails, order still goes through without discount
         console.warn('⚠️  Coupon re-validation error (order proceeding without discount):', couponErr.message);
       }
     }
 
-    // ── 4. Final price calculation ───────────────────────────────────────────
+    // ── 5. Final price calculation ───────────────────────────────────────────
     const shipping   = Number(shippingPrice) || 0;
-    const subtotal   = itemsSubtotal;                               // items only, pre-discount
+    const subtotal   = itemsSubtotal;
     const finalTotal = Math.max(0, subtotal + shipping - verifiedDiscount);
 
-    // ── 5. Extract clean address fields (strip non-schema fields) ────────────
-    // shippingAddress from frontend is the raw address DB doc; we pick only what the schema needs.
+    // ── 6. Extract clean address fields ──────────────────────────────────────
     const {
       houseStreet,
       city,
       state,
       pincode,
       phone: addressPhone,
-      // ignore latitude, longitude, isDefault, user, _id, __v, createdAt, updatedAt, etc.
     } = shippingAddress;
 
     const cleanAddress = { houseStreet, city, state, pincode };
-
-    // Phone: prefer address-level phone, then req.user.phone, then fallback
     const phone = addressPhone || req.user?.phone || '9999999999';
 
-    // ── 6. Save order ────────────────────────────────────────────────────────
+    // ── 7. Save order ────────────────────────────────────────────────────────
     const order = new Order({
       user:            req.user._id,
       orderItems,
@@ -134,20 +126,25 @@ const createOrder = async (req, res) => {
       phone,
       shippingPrice:   shipping,
       taxPrice:        0,
-
-      // ✅ THE FIX: always persist the full price breakdown
-      subtotal,                              // items total before discount
-      couponCode:     verifiedCouponCode,    // null if no valid coupon
-      discountAmount: verifiedDiscount,      // 0 if no coupon
-      totalPrice:     finalTotal,            // final amount customer pays
-
-      // Delivery fields (sent from Checkout as top-level fields)
+      subtotal,
+      couponCode:      verifiedCouponCode,
+      discountAmount:  verifiedDiscount,
+      totalPrice:      finalTotal,
       deliveryDistance: Number(deliveryDistance) || 0,
       deliveryCharge:   Number(deliveryCharge ?? shippingPrice) || 0,
       isServiceable:    Boolean(isServiceable),
     });
 
     const savedOrder = await order.save();
+
+    // ── 8. Deduct stock atomically after order is saved ───────────────────────
+    const stockUpdateOps = orderItems.map((item) => ({
+      updateOne: {
+        filter: { _id: item.product },
+        update: { $inc: { stock: -item.quantity, purchaseCount: item.quantity } },
+      },
+    }));
+    await Product.bulkWrite(stockUpdateOps);
 
     res.status(201).json({ success: true, order: savedOrder });
 
@@ -170,7 +167,6 @@ const getOrderById = async (req, res) => {
     const order = await Order.findById(req.params.id).populate('user', 'name email');
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    // Users can only see their own orders; admins see all
     if (
       order.user._id.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'

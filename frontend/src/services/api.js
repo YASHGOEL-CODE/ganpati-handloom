@@ -94,10 +94,8 @@ export const productsAPI = {
     const cacheKey = `products_${JSON.stringify(params)}`;
     return cachedRequest(cacheKey, () => api.get('/products', { params }), 2 * 60 * 1000);
   },
-  getById: (id) => {
-    const cacheKey = `product_${id}`;
-    return cachedRequest(cacheKey, () => api.get(`/products/${id}`), 5 * 60 * 1000);
-  },
+  getById: (id) => api.get(`/products/${id}`),
+  
   getFeatured: () => {
     const cacheKey = 'products_featured';
     return cachedRequest(cacheKey, () => api.get('/products/featured/list'), 10 * 60 * 1000);

@@ -57,13 +57,20 @@ const ProductDetail = () => {
     }
   };
 
-  // ── All handlers completely unchanged ──
-  const handleAddToCart = () => {
+  // ── CHANGED: Stock check + refetch after add to cart ──
+  const handleAddToCart = async () => {
+    if (quantity > product.stock) {
+      alert(`Only ${product.stock} unit(s) available in stock.`);
+      return;
+    }
     addToCart(product, quantity);
     trackInteraction(product._id, 'add_to_cart', { quantity });
     alert('Product added to cart!');
+    // Refetch so displayed stock reflects latest value from DB
+    await fetchProductDetails();
   };
 
+  // ── All other handlers completely unchanged ──
   const handleWishlistToggle = async () => {
     if (isInWishlist(product._id)) {
       await removeFromWishlist(product._id);
@@ -443,7 +450,7 @@ const ProductDetail = () => {
           border-bottom: 1px solid rgba(255,255,255,0.07);
         }
 
-        /* Child component overrides — make them visible on dark bg */
+        /* Child component overrides */
         .pd-page .bg-white,
         .pd-page .bg-gray-50 {
           background: rgba(255,255,255,0.04) !important;
