@@ -40,8 +40,8 @@ const slides = [
 
 const STATS = [
   { value: '200+', label: 'Artisans' },
-  { value: '5000+', label: 'Products' },
-  { value: '25+', label: 'Years' },
+  { value: '500+', label: 'Products' },
+  { value: '35+', label: 'Years' },
 ];
 
 const HeroSection = () => {

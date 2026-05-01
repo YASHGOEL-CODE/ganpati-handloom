@@ -309,10 +309,47 @@ const getMe = async (req, res) => {
   }
 };
 
+// ── ADD THIS FUNCTION before module.exports ──
+
+// @desc    Google OAuth callback — generate JWT and redirect to frontend
+// @route   GET /api/auth/google/callback
+// @access  Public
+const googleCallback = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.redirect(`${process.env.CLIENT_URL}/signin?error=google_failed`);
+    }
+
+    // Generate JWT using existing generateToken function
+    const token = generateToken(user._id);
+
+    // Build user object same shape as login response
+    const userPayload = encodeURIComponent(JSON.stringify({
+      _id:        user._id,
+      fullName:   user.fullName,
+      email:      user.email,
+      phone:      user.phone || '',
+      role:       user.role,
+      isVerified: user.isVerified,
+    }));
+
+    // Redirect to frontend LoginSuccess page with token + user
+    res.redirect(
+      `${process.env.CLIENT_URL}/login-success?token=${token}&user=${userPayload}`
+    );
+  } catch (error) {
+    console.error('❌ Google callback error:', error);
+    res.redirect(`${process.env.CLIENT_URL}/signin?error=google_failed`);
+  }
+};
+
 module.exports = {
   register,
   verifyEmail,
   resendVerification,
   login,
   getMe,
+  googleCallback,
 };

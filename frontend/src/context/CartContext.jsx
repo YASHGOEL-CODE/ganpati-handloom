@@ -1,72 +1,87 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { AuthContext } from './AuthContext';
 
 export const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
+  const { user } = useContext(AuthContext);
+
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ── NEW: Coupon state — single source of truth for Cart + Checkout ──
+  // ── Coupon state — single source of truth for Cart + Checkout ──
   const [appliedCoupon, setAppliedCouponState] = useState(null);
-  // appliedCoupon shape: { code, discount, discountType, discountValue,
-  //                        minOrderValue, isActive, expiryDate }
 
+  // ── User-specific localStorage keys ──
+  const cartKey   = user?._id ? `cart_${user._id}`               : 'cart_guest';
+  const couponKey = user?._id ? `gh_applied_coupon_${user._id}`  : 'gh_applied_coupon_guest';
+
+  // ── Load cart + coupon whenever user changes (login/logout/switch) ──
   useEffect(() => {
-    // Load cart from localStorage on mount
+    setLoading(true);
+
+    // Load cart
     try {
-      const savedCart = localStorage.getItem('cart');
-      if (savedCart) setCartItems(JSON.parse(savedCart));
+      const savedCart = localStorage.getItem(cartKey);
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+      } else {
+        setCartItems([]); // fresh cart for this user
+      }
     } catch (error) {
       console.error('Error loading cart from localStorage:', error);
       setCartItems([]);
-    } finally {
-      setLoading(false);
     }
 
-    // Load coupon from localStorage on mount
+    // Load coupon
     try {
-      const savedCoupon = localStorage.getItem('gh_applied_coupon');
+      const savedCoupon = localStorage.getItem(couponKey);
       if (savedCoupon) {
         const parsed = JSON.parse(savedCoupon);
-        // Basic client-side expiry/active guard
-        const now = new Date();
+        const now        = new Date();
         const isExpired  = parsed.expiryDate && now > new Date(parsed.expiryDate);
         const isInactive = parsed.isActive === false;
         if (!isExpired && !isInactive) {
           setAppliedCouponState(parsed);
         } else {
-          localStorage.removeItem('gh_applied_coupon');
+          localStorage.removeItem(couponKey);
+          setAppliedCouponState(null);
         }
+      } else {
+        setAppliedCouponState(null); // clear coupon for new user
       }
     } catch (_) {
-      localStorage.removeItem('gh_applied_coupon');
+      localStorage.removeItem(couponKey);
+      setAppliedCouponState(null);
     }
-  }, []); // runs once on mount
 
+    setLoading(false);
+  }, [user?._id]); // ← re-runs on every user change
+
+  // ── Save cart to localStorage whenever cartItems changes ──
   useEffect(() => {
-    // Save cart to localStorage whenever it changes
     if (!loading) {
       try {
-        localStorage.setItem('cart', JSON.stringify(cartItems));
+        localStorage.setItem(cartKey, JSON.stringify(cartItems));
       } catch (error) {
         console.error('Error saving cart to localStorage:', error);
       }
     }
-  }, [cartItems, loading]);
+  }, [cartItems, loading, cartKey]);
 
-  // ── Coupon helpers — used by both Cart and Checkout ──
+  // ── Coupon helpers — unchanged ──
   const setCoupon = (coupon) => {
     setAppliedCouponState(coupon);
     if (coupon) {
-      localStorage.setItem('gh_applied_coupon', JSON.stringify(coupon));
+      localStorage.setItem(couponKey, JSON.stringify(coupon));
     } else {
-      localStorage.removeItem('gh_applied_coupon');
+      localStorage.removeItem(couponKey);
     }
   };
 
   const clearCoupon = () => {
     setAppliedCouponState(null);
-    localStorage.removeItem('gh_applied_coupon');
+    localStorage.removeItem(couponKey);
   };
 
   // ── All original cart methods — completely unchanged ──
@@ -103,7 +118,6 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     setCartItems([]);
-    // Also clear coupon when cart is cleared (after order placed)
     clearCoupon();
   };
 

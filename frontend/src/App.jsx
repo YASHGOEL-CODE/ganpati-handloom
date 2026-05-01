@@ -12,7 +12,6 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 
 const AdminAnalytics           = lazy(() => import('./pages/Admin/AdminAnalytics'));
 const AdminCoupons             = lazy(() => import('./pages/Admin/AdminCoupons'));
-// ✅ NEW
 const AdminFestiveCollections  = lazy(() => import('./pages/Admin/AdminFestiveCollections'));
 
 const VerifyEmail          = lazy(() => import('./components/auth/VerifyEmail'));
@@ -42,6 +41,8 @@ const AdminOrders          = lazy(() => import('./pages/Admin/AdminOrders'));
 const AdminUsers           = lazy(() => import('./pages/Admin/AdminUsers'));
 const AdminLayout          = lazy(() => import('./components/admin/AdminLayout'));
 const AdminCategories      = lazy(() => import('./pages/Admin/AdminCategories'));
+// ── ADDED ──
+const LoginSuccess         = lazy(() => import('./components/pages/LoginSuccess'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -63,7 +64,7 @@ function App() {
                 <main className="flex-grow">
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
-                      {/* ✅ Public Routes */}
+                      {/* Public Routes */}
                       <Route path="/" element={<Home />} />
                       <Route path="/products" element={<ProductList />} />
                       <Route path="/products/:id" element={<ProductDetail />} />
@@ -79,8 +80,10 @@ function App() {
                       <Route path="/collections/:collectionName" element={<Collections />} />
                       <Route path="/verify-email/:token" element={<VerifyEmail />} />
                       <Route path="/resend-verification" element={<ResendVerification />} />
+                      {/* ── ADDED ── */}
+                      <Route path="/login-success" element={<LoginSuccess />} />
 
-                      {/* ✅ Protected Routes — require login */}
+                      {/* Protected Routes */}
                       <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
                       <Route path="/profile"  element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                       <Route path="/orders"   element={<ProtectedRoute><Orders /></ProtectedRoute>} />
@@ -89,7 +92,7 @@ function App() {
                       <Route path="/add-address"      element={<ProtectedRoute><AddAddress /></ProtectedRoute>} />
                       <Route path="/edit-address/:id" element={<ProtectedRoute><EditAddress /></ProtectedRoute>} />
 
-                      {/* ✅ Admin Routes */}
+                      {/* Admin Routes */}
                       <Route path="/admin" element={<ProtectedRoute><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/products"   element={<ProtectedRoute><AdminLayout><AdminProducts /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/orders"     element={<ProtectedRoute><AdminLayout><AdminOrders /></AdminLayout></ProtectedRoute>} />
@@ -97,8 +100,6 @@ function App() {
                       <Route path="/admin/users"      element={<ProtectedRoute><AdminLayout><AdminUsers /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/analytics"  element={<ProtectedRoute><AdminLayout><AdminAnalytics /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/coupons"    element={<ProtectedRoute><AdminLayout><AdminCoupons /></AdminLayout></ProtectedRoute>} />
-
-                      {/* ✅ NEW: Festive Collections admin route */}
                       <Route path="/admin/festive-collections" element={<ProtectedRoute><AdminLayout><AdminFestiveCollections /></AdminLayout></ProtectedRoute>} />
                     </Routes>
                   </Suspense>

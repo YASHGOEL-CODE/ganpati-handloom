@@ -1,20 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { FiMapPin, FiPhone, FiMail, FiHeart, FiArrowRight, FiShield, FiTruck, FiSend } from 'react-icons/fi';
+import { FiMapPin, FiPhone, FiMail, FiHeart, FiArrowRight, FiShield, FiTruck } from 'react-icons/fi';
 
 const Footer = () => {
-  const [email, setEmail]       = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if (email.trim()) {
-      setSubscribed(true);
-      setEmail('');
-      setTimeout(() => setSubscribed(false), 3500);
-    }
-  };
-
   return (
     <>
       <style>{`
@@ -38,82 +26,10 @@ const Footer = () => {
           background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.012'%3E%3Crect x='0' y='0' width='1' height='40'/%3E%3Crect x='20' y='0' width='1' height='40'/%3E%3Crect x='0' y='0' width='40' height='1'/%3E%3Crect x='0' y='20' width='40' height='1'/%3E%3C/g%3E%3C/svg%3E");
         }
 
-        /* ── NEWSLETTER SECTION ── */
-        .footer-newsletter {
-          position: relative; z-index: 1;
-          max-width: 1280px; margin: 0 auto;
-          padding: 48px 24px 0;
-        }
-        .footer-nl-card {
-          background: rgba(255,255,255,0.035);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 22px; padding: 36px 40px;
-          position: relative; overflow: hidden;
-          display: flex; align-items: center; justify-content: space-between;
-          flex-wrap: wrap; gap: 28px;
-          backdrop-filter: blur(16px);
-        }
-        .footer-nl-card::before {
-          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-          background: linear-gradient(90deg, #f97316, #ea580c, transparent);
-          border-radius: 22px 22px 0 0;
-        }
-        /* Ambient glow */
-        .footer-nl-card::after {
-          content: ''; position: absolute; top: -60px; right: -60px;
-          width: 200px; height: 200px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%);
-          pointer-events: none;
-        }
-        .footer-nl-eyebrow {
-          font-size: 11px; font-weight: 700; color: #f97316;
-          letter-spacing: .15em; text-transform: uppercase;
-          margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
-        }
-        .footer-nl-eyebrow::before { content: ''; display: inline-block; width: 18px; height: 1.5px; background: #f97316; }
-        .footer-nl-title {
-          font-family: 'Playfair Display', serif;
-          font-size: clamp(20px, 2.5vw, 28px); font-weight: 800; color: #fff;
-          margin-bottom: 6px;
-        }
-        .footer-nl-sub { font-size: 14px; color: rgba(255,255,255,0.40); line-height: 1.6; }
-        .footer-nl-form {
-          display: flex; gap: 10px; flex-wrap: wrap;
-          min-width: 300px; flex: 1; max-width: 440px;
-          position: relative; z-index: 1;
-        }
-        .footer-nl-input {
-          flex: 1; min-width: 180px;
-          background: rgba(0,0,0,0.30); border: 1.5px solid rgba(255,255,255,0.09);
-          border-radius: 11px; padding: 12px 16px; color: #fff;
-          font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none;
-          transition: border-color .22s, box-shadow .22s;
-        }
-        .footer-nl-input::placeholder { color: rgba(255,255,255,0.22); }
-        .footer-nl-input:focus { border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.13); }
-        .footer-nl-btn {
-          display: inline-flex; align-items: center; gap: 7px;
-          background: linear-gradient(135deg, #ea580c, #f97316);
-          color: #fff; border: none; border-radius: 11px;
-          padding: 12px 22px; font-size: 14px; font-weight: 700;
-          font-family: 'DM Sans', sans-serif; cursor: pointer;
-          transition: transform .22s, box-shadow .22s, filter .22s;
-          box-shadow: 0 4px 16px rgba(234,88,12,0.30); white-space: nowrap;
-        }
-        .footer-nl-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 24px rgba(234,88,12,0.46); filter: brightness(1.08); }
-        .footer-nl-success {
-          display: flex; align-items: center; gap: 8px;
-          font-size: 14px; font-weight: 600; color: #4ade80;
-          background: rgba(74,222,128,0.10); border: 1px solid rgba(74,222,128,0.22);
-          border-radius: 11px; padding: 12px 18px;
-          animation: nlSuccessIn 0.3s ease;
-        }
-        @keyframes nlSuccessIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-
         /* ── TRUST BADGES ── */
         .footer-trust {
           position: relative; z-index: 1;
-          max-width: 1280px; margin: 0 auto; padding: 32px 24px 0;
+          max-width: 1280px; margin: 0 auto; padding: 48px 24px 0;
         }
         .footer-trust-inner {
           display: flex; align-items: center; justify-content: center;
@@ -248,33 +164,6 @@ const Footer = () => {
       `}</style>
 
       <footer className="footer-root">
-
-        {/* ── NEWSLETTER ── */}
-        <div className="footer-newsletter">
-          <div className="footer-nl-card">
-            <div>
-              <p className="footer-nl-eyebrow">Stay Updated</p>
-              <h3 className="footer-nl-title">Get Exclusive Offers</h3>
-              <p className="footer-nl-sub">Subscribe for handloom stories, new arrivals & special discounts.</p>
-            </div>
-            {subscribed ? (
-              <div className="footer-nl-success">
-                ✓ You're subscribed! Welcome to the family.
-              </div>
-            ) : (
-              <form className="footer-nl-form" onSubmit={handleSubscribe}>
-                <input
-                  type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  className="footer-nl-input" placeholder="Enter your email address"
-                  required
-                />
-                <button type="submit" className="footer-nl-btn">
-                  <FiSend size={14} /> Subscribe
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
 
         {/* ── TRUST BADGES ── */}
         <div className="footer-trust">

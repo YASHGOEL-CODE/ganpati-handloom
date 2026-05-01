@@ -295,9 +295,9 @@ const AboutUs = () => {
             <div className="ab-stats" style={{ marginTop: 56 }}>
               {[
                 { val: '200+',  lbl: 'Skilled Artisans' },
-                { val: '5000+', lbl: 'Products' },
-                { val: '25+',   lbl: 'Years of Heritage' },
-                { val: '50K+',  lbl: 'Happy Customers' },
+                { val: '500+', lbl: 'Products' },
+                { val: '35+',   lbl: 'Years of Heritage' },
+                { val: '5K+',  lbl: 'Happy Customers' },
               ].map((s, i) => (
                 <div key={i} className="ab-stat">
                   <div className="ab-stat-val">{s.val}</div>
