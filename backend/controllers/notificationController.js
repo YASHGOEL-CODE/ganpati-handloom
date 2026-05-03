@@ -55,12 +55,14 @@ const getNotifications = async (req, res) => {
 // @desc    Lightweight unread count — polled by navbar every 15s
 // @route   GET /api/notifications/unread-count
 // @access  Private
+// REPLACE with — added type filter for admin
 const getUnreadCount = async (req, res) => {
   try {
     let filter = { isRead: false };
 
     if (req.user.role === 'admin') {
       filter.role = 'admin';
+      filter.type = 'contact'; // ── ADDED: admin bell only counts contact messages
     } else {
       filter.role = 'user';
       filter.$or = [{ userId: req.user._id }, { userId: null }];
@@ -72,6 +74,35 @@ const getUnreadCount = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Get single notification by ID
+// @route   GET /api/notifications/:id
+// @access  Private
+// ── ADDED ──
+const getNotificationById = async (req, res) => {
+  try {
+    const notif = await Notification.findById(req.params.id).lean();
+
+    if (!notif) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    // Admins can see all admin notifs; users only their own
+    if (
+      req.user.role !== 'admin' &&
+      notif.userId &&
+      notif.userId.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    res.json({ success: true, notification: notif });
+  } catch (error) {
+    console.error('❌ Get notification by ID error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+// ── END ADDED ──
 
 // @desc    Mark single notification as read
 // @route   PATCH /api/notifications/:id/read
@@ -156,6 +187,7 @@ const createNotificationAPI = async (req, res) => {
 module.exports = {
   getNotifications,
   getUnreadCount,
+  getNotificationById, // ── ADDED ──
   markAsRead,
   markAllRead,
   createNotificationAPI,

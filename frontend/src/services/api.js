@@ -285,9 +285,11 @@ export const addressAPI = {
 };
 
 // ✅ Notifications API
+// REPLACE WITH — only added getById:
 export const notificationsAPI = {
   getAll: (params = {}) => api.get('/notifications', { params }),
   getUnreadCount: () => api.get('/notifications/unread-count'),
+  getById: (id) => api.get(`/notifications/${id}`), // ── ADDED ──
   markAsRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.patch('/notifications/mark-all-read'),
   create: (data) => api.post('/notifications', data),

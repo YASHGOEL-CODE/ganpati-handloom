@@ -13,6 +13,9 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 const AdminAnalytics           = lazy(() => import('./pages/Admin/AdminAnalytics'));
 const AdminCoupons             = lazy(() => import('./pages/Admin/AdminCoupons'));
 const AdminFestiveCollections  = lazy(() => import('./pages/Admin/AdminFestiveCollections'));
+// ── ADDED ──
+const AdminNotifications       = lazy(() => import('./pages/Admin/AdminNotifications'));
+const AdminNotificationDetail  = lazy(() => import('./pages/Admin/AdminNotificationDetail'));
 
 const VerifyEmail          = lazy(() => import('./components/auth/VerifyEmail'));
 const ResendVerification   = lazy(() => import('./components/auth/ResendVerification'));
@@ -41,7 +44,6 @@ const AdminOrders          = lazy(() => import('./pages/Admin/AdminOrders'));
 const AdminUsers           = lazy(() => import('./pages/Admin/AdminUsers'));
 const AdminLayout          = lazy(() => import('./components/admin/AdminLayout'));
 const AdminCategories      = lazy(() => import('./pages/Admin/AdminCategories'));
-// ── ADDED ──
 const LoginSuccess         = lazy(() => import('./components/pages/LoginSuccess'));
 
 const PageLoader = () => (
@@ -80,7 +82,6 @@ function App() {
                       <Route path="/collections/:collectionName" element={<Collections />} />
                       <Route path="/verify-email/:token" element={<VerifyEmail />} />
                       <Route path="/resend-verification" element={<ResendVerification />} />
-                      {/* ── ADDED ── */}
                       <Route path="/login-success" element={<LoginSuccess />} />
 
                       {/* Protected Routes */}
@@ -101,6 +102,9 @@ function App() {
                       <Route path="/admin/analytics"  element={<ProtectedRoute><AdminLayout><AdminAnalytics /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/coupons"    element={<ProtectedRoute><AdminLayout><AdminCoupons /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/festive-collections" element={<ProtectedRoute><AdminLayout><AdminFestiveCollections /></AdminLayout></ProtectedRoute>} />
+                      {/* ── ADDED ── */}
+                      <Route path="/admin/notifications"     element={<ProtectedRoute><AdminLayout><AdminNotifications /></AdminLayout></ProtectedRoute>} />
+                      <Route path="/admin/notifications/:id" element={<ProtectedRoute><AdminLayout><AdminNotificationDetail /></AdminLayout></ProtectedRoute>} />
                     </Routes>
                   </Suspense>
                 </main>

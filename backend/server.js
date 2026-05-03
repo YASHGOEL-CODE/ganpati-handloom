@@ -106,6 +106,8 @@ app.use('/api/coupons',         require('./routes/coupons'));
 
 // Festive collections
 app.use('/api/festive-collections', require('./routes/festiveCollectionRoutes'));
+// Contact form
+app.use('/api/contact', require('./routes/contactRoutes'));
 
 // ============================================
 // HEALTH CHECK

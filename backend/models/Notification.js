@@ -14,7 +14,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['order', 'payment', 'offer', 'system', 'stock', 'user'],
+      enum: ['order', 'payment', 'offer', 'system', 'stock', 'user', 'contact'],
       default: 'system',
     },
     // 'user' = customer notification, 'admin' = admin notification

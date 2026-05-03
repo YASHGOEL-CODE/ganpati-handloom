@@ -49,21 +49,52 @@ const Contact = () => {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [loading, setLoading]   = useState(false);
   const [success, setSuccess]   = useState(false);
+  const [error,   setError]     = useState('');  // ── ADDED: error state
   const [focused, setFocused]   = useState('');
 
+  // ── CHANGED: handleSubmit now calls real API ──
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setSuccess(true);
+    setError('');
+
+    try {
+      const res = await fetch(
+        `${process.env.REACT_APP_API_URL}/contact`,
+        {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            name:    formData.name,
+            email:   formData.email,
+            phone:   formData.phone,
+            subject: formData.subject,
+            message: formData.message,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setSuccess(true);
+        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        setTimeout(() => setSuccess(false), 4000);
+      } else {
+        setError(data.message || 'Failed to send message. Please try again.');
+      }
+    } catch (err) {
+      console.error('❌ Contact form error:', err);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
       setLoading(false);
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1000);
+    }
   };
+  // ── End of change ──
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (error) setError('');
   };
 
   return (
@@ -71,7 +102,6 @@ const Contact = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
-        /* ── PAGE — updated to match design system ── */
         .ct-page {
           min-height: 100vh;
           background:
@@ -82,8 +112,6 @@ const Contact = () => {
           padding: 0 0 100px;
           overflow-x: hidden;
         }
-
-        /* ── HERO — completely unchanged ── */
         .ct-hero {
           position: relative; text-align: center;
           padding: 100px 24px 80px; overflow: hidden;
@@ -138,16 +166,10 @@ const Contact = () => {
           background: linear-gradient(90deg, transparent, #ea580c, transparent);
           margin: 22px auto 0; animation: ctTitleIn 0.9s ease 0.35s both;
         }
-
-        /* ── WRAP ── */
         .ct-wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
         @media (max-width: 640px) { .ct-wrap { padding: 0 16px; } }
-
-        /* ── MAIN GRID ── */
         .ct-grid { display: grid; grid-template-columns: 1fr 1.7fr; gap: 24px; margin-bottom: 0; }
         @media (max-width: 900px) { .ct-grid { grid-template-columns: 1fr; } }
-
-        /* ── INFO SIDEBAR ── */
         .ct-info-card {
           background: rgba(255,255,255,0.035);
           border: 1px solid rgba(255,255,255,0.07);
@@ -166,7 +188,6 @@ const Contact = () => {
         }
         .ct-info-eyebrow::before { content: ''; display: inline-block; width: 14px; height: 1.5px; background: #f97316; }
         .ct-info-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: #f1f5f9; }
-
         .ct-info-item {
           display: flex; align-items: flex-start; gap: 14px;
           padding: 16px 14px; border-radius: 14px;
@@ -181,8 +202,6 @@ const Contact = () => {
         .ct-info-item:hover .ct-info-icon { transform: scale(1.12) rotate(-6deg); }
         .ct-info-label { font-size: 13px; font-weight: 700; color: #f1f5f9; margin-bottom: 5px; }
         .ct-info-text  { font-size: 13px; color: rgba(255,255,255,0.45); line-height: 1.65; }
-
-        /* ── FORM CARD ── */
         .ct-form-card {
           background: rgba(255,255,255,0.035);
           border: 1px solid rgba(255,255,255,0.07);
@@ -199,8 +218,6 @@ const Contact = () => {
         @media (max-width: 640px) { .ct-form-card { padding: 26px 20px; } }
         .ct-form-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
         .ct-form-sub   { font-size: 13.5px; color: rgba(255,255,255,0.38); margin-bottom: 30px; }
-
-        /* Success banner */
         .ct-success {
           display: flex; align-items: center; gap: 12px;
           background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.25);
@@ -209,14 +226,18 @@ const Contact = () => {
         }
         .ct-success-ico { width: 32px; height: 32px; border-radius: 50%; background: rgba(34,197,94,0.18); border: 1px solid rgba(34,197,94,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .ct-success-txt { font-size: 13.5px; font-weight: 500; color: #4ade80; line-height: 1.5; }
-
-        /* Form fields */
+        .ct-error {
+          display: flex; align-items: center; gap: 10px;
+          background: rgba(239,68,68,0.09); border: 1px solid rgba(239,68,68,0.25);
+          border-radius: 12px; padding: 13px 16px; margin-bottom: 20px;
+          font-size: 13.5px; color: #fca5a5;
+          animation: ctTitleIn 0.3s ease;
+        }
         .ct-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
         @media (max-width: 580px) { .ct-row { grid-template-columns: 1fr; gap: 14px; } }
         .ct-field { margin-bottom: 18px; }
         .ct-field:last-child { margin-bottom: 0; }
         .ct-label { display: block; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.48); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
-
         .ct-input, .ct-select, .ct-textarea {
           width: 100%; background: rgba(0,0,0,0.28); border: 1.5px solid rgba(255,255,255,0.09);
           border-radius: 11px; padding: 13px 16px; color: #fff;
@@ -229,8 +250,6 @@ const Contact = () => {
         .ct-textarea { resize: none; }
         .ct-input:hover:not(:focus), .ct-select:hover:not(:focus), .ct-textarea:hover:not(:focus) { border-color: rgba(255,255,255,0.18); background: rgba(0,0,0,0.35); }
         .ct-input:focus, .ct-select:focus, .ct-textarea:focus { border-color: #f97316; background: rgba(249,115,22,0.05); box-shadow: 0 0 0 3px rgba(249,115,22,0.13), 0 2px 12px rgba(249,115,22,0.08); }
-
-        /* Submit button */
         .ct-submit {
           width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px;
           background: linear-gradient(135deg, #ea580c, #f97316);
@@ -246,8 +265,6 @@ const Contact = () => {
         .ct-submit:active:not(:disabled) { transform: scale(0.99); }
         .ct-submit:disabled { opacity: 0.48; cursor: not-allowed; }
         .ct-submit-inner { position: relative; z-index: 1; display: flex; align-items: center; gap: 9px; }
-
-        /* ── FAQ STRIP ── */
         .ct-faq-section { margin-top: 72px; }
         .ct-faq-header  { text-align: center; margin-bottom: 36px; }
         .ct-faq-eyebrow {
@@ -274,7 +291,6 @@ const Contact = () => {
 
       <div className="ct-page">
 
-        {/* ── HERO — completely unchanged ── */}
         <div className="ct-hero">
           <div className="ct-hero-om">✉️</div>
           <p className="ct-hero-eyebrow">Contact Us</p>
@@ -283,13 +299,12 @@ const Contact = () => {
           <div className="ct-hero-line" />
         </div>
 
-        {/* ── BODY ── */}
         <div className="ct-wrap">
 
           <GlowSection delay={0}>
             <div className="ct-grid">
 
-              {/* INFO SIDEBAR */}
+              {/* INFO SIDEBAR — unchanged */}
               <GlowSection delay={80}>
                 <div className="ct-info-card">
                   <div className="ct-info-header">
@@ -321,10 +336,18 @@ const Contact = () => {
                   <h2 className="ct-form-title">Send Us a Message</h2>
                   <p className="ct-form-sub">Fill in the form and we'll respond within 24 hours</p>
 
+                  {/* Success banner */}
                   {success && (
                     <div className="ct-success">
                       <div className="ct-success-ico"><FiCheck size={16} color="#4ade80" /></div>
                       <p className="ct-success-txt">Thank you for contacting us! We'll get back to you soon.</p>
+                    </div>
+                  )}
+
+                  {/* ── ADDED: Error banner ── */}
+                  {error && (
+                    <div className="ct-error">
+                      ⚠️ {error}
                     </div>
                   )}
 
@@ -380,7 +403,7 @@ const Contact = () => {
             </div>
           </GlowSection>
 
-          {/* ── FAQ STRIP ── */}
+          {/* FAQ STRIP — unchanged */}
           <GlowSection delay={0} className="ct-faq-section">
             <div className="ct-faq-header">
               <p className="ct-faq-eyebrow">Quick Answers</p>

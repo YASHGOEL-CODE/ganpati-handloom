@@ -6,7 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   FiUsers, FiShoppingBag, FiPackage, FiDollarSign,
   FiClock, FiCheck, FiPlus, FiEye, FiBarChart2,
-  FiArrowRight, FiZap, FiActivity,
+  FiArrowRight, FiZap, FiActivity, FiBell,
 } from 'react-icons/fi';
 
 const STAT_CONFIG = [
@@ -138,9 +138,11 @@ const AdminDashboard = () => {
         .mc-btn-orange { background:linear-gradient(135deg,#ea580c,#f97316); color:#fff; box-shadow:0 4px 14px rgba(249,115,22,0.30); }
         .mc-btn-blue   { background:linear-gradient(135deg,#2563eb,#3b82f6); color:#fff; box-shadow:0 4px 14px rgba(59,130,246,0.25); }
         .mc-btn-purple { background:linear-gradient(135deg,#7c3aed,#8b5cf6); color:#fff; box-shadow:0 4px 14px rgba(139,92,246,0.25); }
+        .mc-btn-green  { background:linear-gradient(135deg,#059669,#10b981); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.25); }
         .mc-btn-orange:hover { box-shadow:0 8px 22px rgba(249,115,22,0.48); }
         .mc-btn-blue:hover   { box-shadow:0 8px 22px rgba(59,130,246,0.44); }
         .mc-btn-purple:hover { box-shadow:0 8px 22px rgba(139,92,246,0.44); }
+        .mc-btn-green:hover  { box-shadow:0 8px 22px rgba(16,185,129,0.44); }
 
         .mc-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:14px; margin-bottom:20px; }
         .mc-stat { background:rgba(255,255,255,0.04); backdrop-filter:blur(18px); border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:20px 18px; position:relative; overflow:hidden; transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease; cursor:default; animation:mcStatIn .55s ease both; }
@@ -204,9 +206,11 @@ const AdminDashboard = () => {
           <div className="mc-dock">
             <span className="mc-dock-label">Quick Actions</span>
             <div className="mc-dock-sep" />
-            <Link to="/admin/products/add" className="mc-dock-btn mc-btn-orange"><FiPlus size={14} /> Add Product</Link>
-            <Link to="/admin/orders"       className="mc-dock-btn mc-btn-blue"  ><FiEye size={14} /> View Orders</Link>
-            <Link to="/admin/analytics"    className="mc-dock-btn mc-btn-purple"><FiBarChart2 size={14} /> Analytics</Link>
+            <Link to="/admin/products/add"  className="mc-dock-btn mc-btn-orange"><FiPlus size={14} /> Add Product</Link>
+            <Link to="/admin/orders"        className="mc-dock-btn mc-btn-blue"  ><FiEye size={14} /> View Orders</Link>
+            <Link to="/admin/analytics"     className="mc-dock-btn mc-btn-purple"><FiBarChart2 size={14} /> Analytics</Link>
+            {/* ── ADDED ── */}
+            <Link to="/admin/notifications" className="mc-dock-btn mc-btn-green" ><FiBell size={14} /> Notifications</Link>
           </div>
 
           {/* STAT CARDS */}
@@ -222,11 +226,12 @@ const AdminDashboard = () => {
             <p className="mc-info-sub">Manage all aspects of Ganpati Handloom from one place. Use the sidebar to navigate between sections.</p>
             <div className="mc-quick-links">
               {[
-                { to:'/admin/products',   icon:FiPackage,     label:'Products'   },
-                { to:'/admin/orders',     icon:FiShoppingBag, label:'Orders'     },
-                { to:'/admin/users',      icon:FiUsers,       label:'Users'      },
-                { to:'/admin/categories', icon:FiZap,         label:'Categories' },
-                { to:'/admin/analytics',  icon:FiBarChart2,   label:'Analytics'  },
+                { to:'/admin/products',      icon:FiPackage,     label:'Products'      },
+                { to:'/admin/orders',        icon:FiShoppingBag, label:'Orders'        },
+                { to:'/admin/users',         icon:FiUsers,       label:'Users'         },
+                { to:'/admin/categories',    icon:FiZap,         label:'Categories'    },
+                { to:'/admin/analytics',     icon:FiBarChart2,   label:'Analytics'     },
+                { to:'/admin/notifications', icon:FiBell,        label:'Notifications' },
               ].map(q => (
                 <Link key={q.to} to={q.to} className="mc-ql">
                   <q.icon size={12} /> {q.label} <FiArrowRight size={11} />
