@@ -197,40 +197,59 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
 
     // ── ADDED: Check permission first to avoid timeout on mobile ──
+    // REPLACE with — two-attempt strategy to fix mobile first-click timeout
     const doGetPosition = () => {
       setLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const position = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          console.log('✅ Current location:', position);
 
-          if (map && marker) {
-            map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
-            marker.setLatLng([position.lat, position.lng]);
-            await handleLocationChange(position.lat, position.lng);
-          }
-          setLoading(false);
-        },
-        (err) => {
-          console.error('❌ Geolocation error:', err);
-          let errorMessage = 'Unable to get your location. Please try again.';
-          if (err.code === 1) {
-            errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
-          } else if (err.code === 2) {
-            errorMessage = 'Location unavailable. Please check your device GPS settings.';
-          } else if (err.code === 3) {
-            errorMessage = 'Location request timed out. Please try again.';
-          }
-          setError(errorMessage);
-          setLoading(false);
+      const onSuccess = async (pos) => {
+        const position = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        console.log('✅ Current location:', position);
+        if (map && marker) {
+          map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
+          marker.setLatLng([position.lat, position.lng]);
+          await handleLocationChange(position.lat, position.lng);
+        }
+        setLoading(false);
+      };
+
+      const onError = (err) => {
+        console.error('❌ Geolocation error:', err);
+        let errorMessage = 'Unable to get your location. Please try again.';
+        if (err.code === 1) {
+          errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+        } else if (err.code === 2) {
+          errorMessage = 'Location unavailable. Please check your device GPS settings.';
+        } else if (err.code === 3) {
+          errorMessage = 'Location request timed out. Please try again.';
+        }
+        setError(errorMessage);
+        setLoading(false);
+      };
+
+      // ── First attempt: low accuracy (fast, uses WiFi/network — no GPS cold start) ──
+      navigator.geolocation.getCurrentPosition(
+        onSuccess,
+        (firstErr) => {
+          console.warn('⚠️ Low accuracy attempt failed, trying high accuracy...', firstErr);
+          // ── Second attempt: high accuracy (GPS) ──
+          navigator.geolocation.getCurrentPosition(
+            onSuccess,
+            onError,
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 0,
+            }
+          );
         },
         {
-          enableHighAccuracy: true,
-          timeout: 15000,   // increased to 15s for mobile
-          maximumAge: 0,
+          enableHighAccuracy: false, // fast network-based location
+          timeout: 5000,             // short timeout — if slow, fall to GPS attempt
+          maximumAge: 60000,         // accept cached location up to 1 min old
         }
       );
     };
+// ── END REPLACE ──
 
     // Check permission status first
     if (navigator.permissions) {
