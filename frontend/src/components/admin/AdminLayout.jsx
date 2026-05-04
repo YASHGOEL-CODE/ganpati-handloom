@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FiHome, FiPackage, FiShoppingBag, FiUsers,
-  FiBarChart2, FiMenu, FiX, FiTag, FiStar,
+  FiBarChart2, FiMenu, FiX, FiTag, FiStar, FiBell,
 } from 'react-icons/fi';
 
 const AdminLayout = ({ children }) => {
@@ -16,9 +16,9 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/users',                icon: FiUsers,     label: 'Users' },
     { path: '/admin/categories',           icon: FiTag,       label: 'Categories' },
     { path: '/admin/coupons',              icon: FiTag,       label: 'Coupons' },
-    // ✅ NEW
     { path: '/admin/festive-collections',  icon: FiStar,      label: 'Festive Collections' },
     { path: '/admin/analytics',            icon: FiBarChart2, label: 'Analytics' },
+    { path: '/admin/notifications',        icon: FiBell,      label: 'Notifications' }, // ── ADDED ──
   ];
 
   const isActive = (path, exact = false) => {

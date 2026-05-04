@@ -11,7 +11,6 @@ L.Icon.Default.mergeOptions({
 });
 
 const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
-  // State
   const [map, setMap] = useState(null);
   const [marker, setMarker] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,17 +23,13 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
 
   const defaultCenter = initialLocation || { lat: 28.4744, lng: 77.5040 };
 
-  // Initialize map once
   useEffect(() => {
     if (!initRef.current && mapRef.current) {
       initRef.current = true;
       initializeMap();
     }
-
     return () => {
-      if (map) {
-        map.remove();
-      }
+      if (map) map.remove();
     };
   }, []);
 
@@ -42,12 +37,9 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     try {
       setLoading(true);
       setError(null);
-
       console.log('🗺️ Initializing map...');
-
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Create map with full interactivity
       const mapInstance = L.map(mapRef.current, {
         center: [defaultCenter.lat, defaultCenter.lng],
         zoom: 15,
@@ -61,26 +53,22 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
         inertia: true,
       });
 
-      // Add tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
         maxZoom: 19,
       }).addTo(mapInstance);
 
-      // Create draggable marker
       const markerInstance = L.marker([defaultCenter.lat, defaultCenter.lng], {
         draggable: true,
         autoPan: true,
       }).addTo(mapInstance);
 
-      // Event: Marker dragged
       markerInstance.on('dragend', async (e) => {
         const pos = e.target.getLatLng();
         console.log('📍 Marker dragged to:', pos);
         await handleLocationChange(pos.lat, pos.lng);
       });
 
-      // Event: Map clicked
       mapInstance.on('click', async (e) => {
         console.log('🖱️ Map clicked at:', e.latlng);
         markerInstance.setLatLng(e.latlng);
@@ -89,13 +77,9 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
 
       setMap(mapInstance);
       setMarker(markerInstance);
-
-      // Get initial address
       await handleLocationChange(defaultCenter.lat, defaultCenter.lng);
-
       setLoading(false);
       console.log('✅ Map initialized');
-
     } catch (err) {
       console.error('❌ Map init error:', err);
       setError('Failed to load map. Please refresh.');
@@ -103,29 +87,67 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // Reverse geocode using backend
+  // ── CHANGED: Added Nominatim fallback for better city/state/pincode extraction ──
   const reverseGeocode = async (lat, lng) => {
     try {
       console.log('🔄 Reverse geocoding:', { lat, lng });
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: lat, longitude: lng }),
-      });
+      // Try backend first
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude: lat, longitude: lng }),
+        });
+        const data = await response.json();
+        console.log('📍 Backend geocoding response:', data);
 
-      const data = await response.json();
-      console.log('📍 Geocoding response:', data);
-
-      if (!data.success) {
-        throw new Error(data.message || 'Geocoding failed');
+        if (data.success && (data.address.city || data.address.state || data.address.pincode)) {
+          return data.address;
+        }
+        // If backend returns empty fields, fall through to Nominatim
+        console.warn('⚠️ Backend returned empty fields, trying Nominatim directly...');
+      } catch (backendErr) {
+        console.warn('⚠️ Backend geocoding failed, trying Nominatim directly:', backendErr.message);
       }
 
-      return data.address;
+      // ── ADDED: Direct Nominatim call as fallback ──
+      const nominatimRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'en',
+            'User-Agent': 'GanpatiHandloom/1.0',
+          },
+        }
+      );
+      const nominatimData = await nominatimRes.json();
+      console.log('📍 Nominatim response:', nominatimData);
+
+      const addr = nominatimData.address || {};
+      const city =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.suburb ||
+        addr.county ||
+        '';
+      const state   = addr.state || '';
+      const pincode = addr.postcode || '';
+
+      return {
+        formattedAddress: nominatimData.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+        street:  addr.road || addr.street || '',
+        area:    addr.suburb || addr.neighbourhood || addr.locality || '',
+        city,
+        state,
+        pincode,
+        country: addr.country || 'India',
+      };
+      // ── END ADDED ──
 
     } catch (error) {
       console.error('❌ Geocoding error:', error);
-      // Return fallback with coordinates
       return {
         formattedAddress: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
         street: '',
@@ -137,30 +159,27 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       };
     }
   };
+  // ── END CHANGED ──
 
-  // Handle location change (marker move, map click, current location)
   const handleLocationChange = async (lat, lng) => {
     try {
       setGeocoding(true);
-
       const address = await reverseGeocode(lat, lng);
       setSelectedAddress(address);
 
-      // Notify parent component with full data
       if (onLocationSelect) {
         onLocationSelect({
           latitude: lat,
           longitude: lng,
           formattedAddress: address.formattedAddress,
-          street: address.street || '',
-          area: address.area || '',
-          city: address.city || '',
-          state: address.state || '',
+          street:  address.street  || '',
+          area:    address.area    || '',
+          city:    address.city    || '',
+          state:   address.state   || '',
           pincode: address.pincode || '',
           country: address.country || 'India',
         });
       }
-
     } catch (err) {
       console.error('❌ Location change error:', err);
     } finally {
@@ -168,66 +187,78 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // Get current location
+  // ── CHANGED: Fixed permission handling to prevent mobile timeout ──
   const handleGetCurrentLocation = async () => {
-    try {
+    setError(null);
+
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    // ── ADDED: Check permission first to avoid timeout on mobile ──
+    const doGetPosition = () => {
       setLoading(true);
-      setError(null);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const position = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          console.log('✅ Current location:', position);
 
-      console.log('📍 Getting current location...');
+          if (map && marker) {
+            map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
+            marker.setLatLng([position.lat, position.lng]);
+            await handleLocationChange(position.lat, position.lng);
+          }
+          setLoading(false);
+        },
+        (err) => {
+          console.error('❌ Geolocation error:', err);
+          let errorMessage = 'Unable to get your location. Please try again.';
+          if (err.code === 1) {
+            errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+          } else if (err.code === 2) {
+            errorMessage = 'Location unavailable. Please check your device GPS settings.';
+          } else if (err.code === 3) {
+            errorMessage = 'Location request timed out. Please try again.';
+          }
+          setError(errorMessage);
+          setLoading(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,   // increased to 15s for mobile
+          maximumAge: 0,
+        }
+      );
+    };
 
-      // Get geolocation
-      const position = await new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(new Error('Geolocation not supported by your browser'));
+    // Check permission status first
+    if (navigator.permissions) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        console.log('📍 Permission status:', permissionStatus.state);
+
+        if (permissionStatus.state === 'denied') {
+          setError('Location permission denied. Please enable location access in your browser or device settings and try again.');
           return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          }),
-          (err) => reject(err),
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          }
-        );
-      });
+        // 'granted' or 'prompt' — both go through getCurrentPosition
+        // For 'granted': works instantly, no popup
+        // For 'prompt': shows permission popup (expected behaviour)
+        doGetPosition();
 
-      console.log('✅ Current location:', position);
-
-      if (map && marker) {
-        // Animate map to location
-        map.flyTo([position.lat, position.lng], 16, {
-          duration: 1.5,
-        });
-        marker.setLatLng([position.lat, position.lng]);
-        
-        // Get and auto-fill address
-        await handleLocationChange(position.lat, position.lng);
+      } catch (permErr) {
+        // navigator.permissions not supported — fall through directly
+        console.warn('⚠️ Permissions API not supported, calling getCurrentPosition directly');
+        doGetPosition();
       }
-
-      setLoading(false);
-
-    } catch (err) {
-      console.error('❌ Current location error:', err);
-      
-      let errorMessage = 'Unable to get your location.';
-      if (err.code === 1) {
-        errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
-      } else if (err.code === 2) {
-        errorMessage = 'Location unavailable. Please check your device settings.';
-      } else if (err.code === 3) {
-        errorMessage = 'Location request timed out. Please try again.';
-      }
-      
-      setError(errorMessage);
-      setLoading(false);
+    } else {
+      // No permissions API (some browsers) — call directly
+      doGetPosition();
     }
   };
+  // ── END CHANGED ──
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -256,12 +287,9 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       )}
 
       {/* Map Container */}
-      <div 
+      <div
         className="relative flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-lg"
-        style={{ 
-          minHeight: '400px',
-          touchAction: 'none',
-        }}
+        style={{ minHeight: '400px', touchAction: 'none' }}
       >
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm z-[1000]">
@@ -274,17 +302,12 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
           </div>
         )}
 
-        <div 
-          ref={mapRef} 
-          className="w-full h-full" 
-          style={{ 
-            minHeight: '400px',
-            cursor: 'grab',
-            zIndex: 1,
-          }} 
+        <div
+          ref={mapRef}
+          className="w-full h-full"
+          style={{ minHeight: '400px', cursor: 'grab', zIndex: 1 }}
         />
 
-        {/* Geocoding Indicator */}
         {geocoding && !loading && (
           <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-xl border-2 border-saffron-500 flex items-center gap-2 z-[1000]">
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-saffron-600 border-t-transparent" />
@@ -340,7 +363,7 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       {/* Instructions */}
       <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
         <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
-          <strong>💡 How to use:</strong> Click "Use My Current Location" to auto-detect your address, 
+          <strong>💡 How to use:</strong> Click "Use My Current Location" to auto-detect your address,
           or drag the marker on the map to your exact location. The address fields below will be filled automatically.
         </p>
       </div>
