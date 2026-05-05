@@ -30,6 +30,16 @@ const register = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+
+      // ── ADDED: Check if existing user signed up with Google ──
+      if (existingUser.googleId) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email already exists via Google. Please sign in with Google.',
+        });
+      }
+      // ── End added ──
+
       return res.status(400).json({
         success: false,
         message: 'Email already registered',
@@ -59,10 +69,10 @@ const register = async (req, res) => {
       console.log('📧 Verification email sent');
     } catch (emailError) {
       console.error('❌ Email send failed:', emailError);
-      
+
       // Delete user if email fails
       await User.findByIdAndDelete(user._id);
-      
+
       return res.status(500).json({
         success: false,
         message: 'Failed to send verification email. Please try again.',
@@ -108,7 +118,7 @@ const verifyEmail = async (req, res) => {
     }).select('+verificationToken +verificationTokenExpiry');
 
     console.log('👤 User found:', !!user);
-    
+
     if (user) {
       console.log('⏰ Token expiry:', new Date(user.verificationTokenExpiry));
       console.log('🕐 Current time:', new Date());
@@ -147,6 +157,7 @@ const verifyEmail = async (req, res) => {
     });
   }
 };
+
 // @desc    Resend verification email
 // @route   POST /api/auth/resend-verification
 // @access  Public
@@ -229,7 +240,17 @@ const login = async (req, res) => {
       });
     }
 
-    // ✅ CHECK EMAIL VERIFICATION
+    // ── ADDED: Check if user signed up with Google ──
+    if (user.googleId && (!user.password || user.password.startsWith('google-oauth-'))) {
+      return res.status(400).json({
+        success: false,
+        message: 'This account was created using Google. Please sign in with Google instead.',
+        isGoogleAccount: true, // frontend can use this to show Google button
+      });
+    }
+    // ── End added ──
+
+    // Check email verification
     if (!user.isVerified) {
       console.log('❌ Login blocked: Email not verified');
       return res.status(403).json({
@@ -267,7 +288,6 @@ const login = async (req, res) => {
     // Generate token
     const token = generateToken(user._id);
 
-    // Send response
     res.json({
       success: true,
       message: 'Login successful',
@@ -309,8 +329,6 @@ const getMe = async (req, res) => {
   }
 };
 
-// ── ADD THIS FUNCTION before module.exports ──
-
 // @desc    Google OAuth callback — generate JWT and redirect to frontend
 // @route   GET /api/auth/google/callback
 // @access  Public
@@ -335,7 +353,6 @@ const googleCallback = async (req, res) => {
       isVerified: user.isVerified,
     }));
 
-    // Redirect to frontend LoginSuccess page with token + user
     res.redirect(
       `${process.env.CLIENT_URL}/login-success?token=${token}&user=${userPayload}`
     );

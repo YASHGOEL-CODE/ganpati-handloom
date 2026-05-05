@@ -41,6 +41,9 @@ const SignIn = () => {
           setNeedsVerification(true);
           setUserEmail(result.email || formData.email);
           setError(result.message || 'Please verify your email before logging in.');
+        // REPLACE with:
+        } else if (result.isGoogleAccount) {
+          setError('This account was created with Google. Please use the "Continue with Google" button below.');
         } else {
           setError(result.message || 'Invalid email or password.');
         }
