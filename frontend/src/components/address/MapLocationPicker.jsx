@@ -87,64 +87,24 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // ── CHANGED: Added Nominatim fallback for better city/state/pincode extraction ──
   const reverseGeocode = async (lat, lng) => {
     try {
       console.log('🔄 Reverse geocoding:', { lat, lng });
 
-      // Try backend first
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ latitude: lat, longitude: lng }),
-        });
-        const data = await response.json();
-        console.log('📍 Backend geocoding response:', data);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      });
 
-        if (data.success && (data.address.city || data.address.state || data.address.pincode)) {
-          return data.address;
-        }
-        // If backend returns empty fields, fall through to Nominatim
-        console.warn('⚠️ Backend returned empty fields, trying Nominatim directly...');
-      } catch (backendErr) {
-        console.warn('⚠️ Backend geocoding failed, trying Nominatim directly:', backendErr.message);
+      const data = await response.json();
+      console.log('📍 Geocoding response:', data);
+
+      if (!data.success) {
+        throw new Error(data.message || 'Geocoding failed');
       }
 
-      // ── ADDED: Direct Nominatim call as fallback ──
-      const nominatimRes = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-        {
-          headers: {
-            'Accept-Language': 'en',
-            'User-Agent': 'GanpatiHandloom/1.0',
-          },
-        }
-      );
-      const nominatimData = await nominatimRes.json();
-      console.log('📍 Nominatim response:', nominatimData);
-
-      const addr = nominatimData.address || {};
-      const city =
-        addr.city ||
-        addr.town ||
-        addr.village ||
-        addr.suburb ||
-        addr.county ||
-        '';
-      const state   = addr.state || '';
-      const pincode = addr.postcode || '';
-
-      return {
-        formattedAddress: nominatimData.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-        street:  addr.road || addr.street || '',
-        area:    addr.suburb || addr.neighbourhood || addr.locality || '',
-        city,
-        state,
-        pincode,
-        country: addr.country || 'India',
-      };
-      // ── END ADDED ──
+      return data.address;
 
     } catch (error) {
       console.error('❌ Geocoding error:', error);
@@ -159,7 +119,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       };
     }
   };
-  // ── END CHANGED ──
 
   const handleLocationChange = async (lat, lng) => {
     try {
@@ -187,81 +146,55 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // ── CHANGED: Fixed permission handling to prevent mobile timeout ──
-  const handleGetCurrentLocation = async () => {
+  const handleGetCurrentLocation = () => {
     setError(null);
+    setLoading(true);
 
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser.');
+      setLoading(false);
       return;
     }
 
-    // ── ADDED: Check permission first to avoid timeout on mobile ──
-    const doGetPosition = () => {
-      setLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const position = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          console.log('✅ Current location:', position);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const position = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
+        console.log('✅ Current location:', position);
 
-          if (map && marker) {
-            map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
-            marker.setLatLng([position.lat, position.lng]);
-            await handleLocationChange(position.lat, position.lng);
-          }
-          setLoading(false);
-        },
-        (err) => {
-          console.error('❌ Geolocation error:', err);
-          let errorMessage = 'Unable to get your location. Please try again.';
-          if (err.code === 1) {
-            errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
-          } else if (err.code === 2) {
-            errorMessage = 'Location unavailable. Please check your device GPS settings.';
-          } else if (err.code === 3) {
-            errorMessage = 'Location request timed out. Please try again.';
-          }
-          setError(errorMessage);
-          setLoading(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,   // increased to 15s for mobile
-          maximumAge: 0,
+        if (map && marker) {
+          map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
+          marker.setLatLng([position.lat, position.lng]);
+          await handleLocationChange(position.lat, position.lng);
         }
-      );
-    };
-
-    // Check permission status first
-    if (navigator.permissions) {
-      try {
-        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-        console.log('📍 Permission status:', permissionStatus.state);
-
-        if (permissionStatus.state === 'denied') {
-          setError('Location permission denied. Please enable location access in your browser or device settings and try again.');
-          return;
+        setLoading(false);
+      },
+      (err) => {
+        console.error('❌ Current location error:', err);
+        let errorMessage = 'Unable to get your location.';
+        if (err.code === 1) {
+          errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+        } else if (err.code === 2) {
+          errorMessage = 'Location unavailable. Please check your device settings.';
+        } else if (err.code === 3) {
+          errorMessage = 'Location request timed out. Please try again.';
         }
-
-        // 'granted' or 'prompt' — both go through getCurrentPosition
-        // For 'granted': works instantly, no popup
-        // For 'prompt': shows permission popup (expected behaviour)
-        doGetPosition();
-
-      } catch (permErr) {
-        // navigator.permissions not supported — fall through directly
-        console.warn('⚠️ Permissions API not supported, calling getCurrentPosition directly');
-        doGetPosition();
+        setError(errorMessage);
+        setLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
       }
-    } else {
-      // No permissions API (some browsers) — call directly
-      doGetPosition();
-    }
+    );
   };
-  // ── END CHANGED ──
 
   return (
     <div className="w-full h-full flex flex-col">
+
       {/* Use Current Location Button */}
       <button
         onClick={handleGetCurrentLocation}
@@ -367,6 +300,7 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
           or drag the marker on the map to your exact location. The address fields below will be filled automatically.
         </p>
       </div>
+
     </div>
   );
 };
