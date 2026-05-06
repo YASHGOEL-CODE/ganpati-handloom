@@ -18,6 +18,7 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
   const [error, setError] = useState(null);
   const [geocoding, setGeocoding] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const mapRef = useRef(null);
   const initRef = useRef(false);
@@ -47,7 +48,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Create map with full interactivity
       const mapInstance = L.map(mapRef.current, {
         center: [defaultCenter.lat, defaultCenter.lng],
         zoom: 15,
@@ -61,26 +61,22 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
         inertia: true,
       });
 
-      // Add tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
         maxZoom: 19,
       }).addTo(mapInstance);
 
-      // Create draggable marker
       const markerInstance = L.marker([defaultCenter.lat, defaultCenter.lng], {
         draggable: true,
         autoPan: true,
       }).addTo(mapInstance);
 
-      // Event: Marker dragged
       markerInstance.on('dragend', async (e) => {
         const pos = e.target.getLatLng();
         console.log('📍 Marker dragged to:', pos);
         await handleLocationChange(pos.lat, pos.lng);
       });
 
-      // Event: Map clicked
       mapInstance.on('click', async (e) => {
         console.log('🖱️ Map clicked at:', e.latlng);
         markerInstance.setLatLng(e.latlng);
@@ -90,7 +86,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       setMap(mapInstance);
       setMarker(markerInstance);
 
-      // Get initial address
       await handleLocationChange(defaultCenter.lat, defaultCenter.lng);
 
       setLoading(false);
@@ -103,12 +98,12 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // Reverse geocode using backend
+  // ── FIXED: replaced hardcoded localhost with env variable ──
   const reverseGeocode = async (lat, lng) => {
     try {
       console.log('🔄 Reverse geocoding:', { lat, lng });
 
-      const response = await fetch('http://localhost:5000/api/geocoding/reverse', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ latitude: lat, longitude: lng }),
@@ -125,7 +120,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
 
     } catch (error) {
       console.error('❌ Geocoding error:', error);
-      // Return fallback with coordinates
       return {
         formattedAddress: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
         street: '',
@@ -138,7 +132,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // Handle location change (marker move, map click, current location)
   const handleLocationChange = async (lat, lng) => {
     try {
       setGeocoding(true);
@@ -146,7 +139,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       const address = await reverseGeocode(lat, lng);
       setSelectedAddress(address);
 
-      // Notify parent component with full data
       if (onLocationSelect) {
         onLocationSelect({
           latitude: lat,
@@ -168,78 +160,103 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // Get current location
+  // ── FIXED: handleGetCurrentLocation — mobile reliable geolocation ──
   const handleGetCurrentLocation = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  if (locationLoading) return; // prevent multiple clicks
 
-      console.log('📍 Getting current location...');
+  setError(null);
+  setLocationLoading(true);
 
-      // Get geolocation
-      const position = await new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(new Error('Geolocation not supported by your browser'));
-          return;
-        }
+  // HTTPS check
+  if (
+    window.location.protocol !== 'https:' &&
+    window.location.hostname !== 'localhost'
+  ) {
+    setError('Location access requires HTTPS.');
+    setLocationLoading(false);
+    return;
+  }
 
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          }),
-          (err) => reject(err),
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          }
-        );
-      });
+  if (!navigator.geolocation) {
+    setError('Geolocation is not supported.');
+    setLocationLoading(false);
+    return;
+  }
 
-      console.log('✅ Current location:', position);
+  // 🔥 IMPORTANT: small delay (fixes mobile issue)
+  await new Promise(resolve => setTimeout(resolve, 300));
 
-      if (map && marker) {
-        // Animate map to location
-        map.flyTo([position.lat, position.lng], 16, {
-          duration: 1.5,
-        });
-        marker.setLatLng([position.lat, position.lng]);
-        
-        // Get and auto-fill address
-        await handleLocationChange(position.lat, position.lng);
-      }
+  const onSuccess = async (pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
 
-      setLoading(false);
+    console.log('✅ Location:', lat, lng);
 
-    } catch (err) {
-      console.error('❌ Current location error:', err);
-      
-      let errorMessage = 'Unable to get your location.';
-      if (err.code === 1) {
-        errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
-      } else if (err.code === 2) {
-        errorMessage = 'Location unavailable. Please check your device settings.';
-      } else if (err.code === 3) {
-        errorMessage = 'Location request timed out. Please try again.';
-      }
-      
-      setError(errorMessage);
-      setLoading(false);
+    if (map && marker) {
+      map.flyTo([lat, lng], 16, { duration: 1.5 });
+      marker.setLatLng([lat, lng]);
+      await handleLocationChange(lat, lng);
     }
+
+    setLocationLoading(false);
   };
+
+  const onError = (err) => {
+    console.error('❌ Location error:', err);
+
+    let msg = 'Unable to get location';
+
+    if (err.code === 1)
+      msg = 'Permission denied. Enable location in browser & device settings.';
+    else if (err.code === 2)
+      msg = 'Location unavailable. Turn ON GPS.';
+    else if (err.code === 3)
+      msg = 'Location timeout. Try again.';
+
+    setError(msg);
+    setLocationLoading(false);
+  };
+
+  // Step 1: fast location
+  navigator.geolocation.getCurrentPosition(
+    onSuccess,
+    (err) => {
+      if (err.code === 1) {
+        onError(err);
+        return;
+      }
+
+      // Step 2: retry with GPS
+      navigator.geolocation.getCurrentPosition(
+        onSuccess,
+        onError,
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        }
+      );
+    },
+    {
+      enableHighAccuracy: false,
+      timeout: 8000,
+      maximumAge: 60000,
+    }
+  );
+};
+  // ── END FIXED ──
 
   return (
     <div className="w-full h-full flex flex-col">
       {/* Use Current Location Button */}
       <button
         onClick={handleGetCurrentLocation}
-        disabled={loading}
+        disabled={locationLoading}
         type="button"
         className="mb-4 flex items-center justify-center gap-2 bg-saffron-600 text-white px-6 py-3 rounded-lg hover:bg-saffron-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
       >
         <FiNavigation className="w-5 h-5" />
-        {loading ? 'Getting Your Location...' : 'Use My Current Location'}
+        {locationLoading ? 'Getting Your Location...' : 'Use My Current Location'}
       </button>
 
       {/* Error Alert */}
@@ -256,9 +273,9 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       )}
 
       {/* Map Container */}
-      <div 
+      <div
         className="relative flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 shadow-lg"
-        style={{ 
+        style={{
           minHeight: '400px',
           touchAction: 'none',
         }}
@@ -274,14 +291,14 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
           </div>
         )}
 
-        <div 
-          ref={mapRef} 
-          className="w-full h-full" 
-          style={{ 
+        <div
+          ref={mapRef}
+          className="w-full h-full"
+          style={{
             minHeight: '400px',
             cursor: 'grab',
             zIndex: 1,
-          }} 
+          }}
         />
 
         {/* Geocoding Indicator */}
@@ -340,7 +357,7 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       {/* Instructions */}
       <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
         <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
-          <strong>💡 How to use:</strong> Click "Use My Current Location" to auto-detect your address, 
+          <strong>💡 How to use:</strong> Click "Use My Current Location" to auto-detect your address,
           or drag the marker on the map to your exact location. The address fields below will be filled automatically.
         </p>
       </div>
