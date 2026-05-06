@@ -108,15 +108,29 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
 
     } catch (error) {
       console.error('❌ Geocoding error:', error);
-      return {
-        formattedAddress: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-        street: '',
-        area: '',
-        city: '',
-        state: '',
-        pincode: '',
-        country: 'India',
-      };
+      // Fallback: try Nominatim directly
+      try {
+        const nominatimRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+          { headers: { 'Accept-Language': 'en', 'User-Agent': 'GanpatiHandloom/1.0' } }
+        );
+        const nominatimData = await nominatimRes.json();
+        const addr = nominatimData.address || {};
+        return {
+          formattedAddress: nominatimData.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+          street:  addr.road || addr.street || '',
+          area:    addr.suburb || addr.neighbourhood || addr.locality || '',
+          city:    addr.city || addr.town || addr.village || addr.suburb || addr.county || '',
+          state:   addr.state || '',
+          pincode: addr.postcode || '',
+          country: addr.country || 'India',
+        };
+      } catch (_) {
+        return {
+          formattedAddress: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+          street: '', area: '', city: '', state: '', pincode: '', country: 'India',
+        };
+      }
     }
   };
 
@@ -146,6 +160,8 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
+  // ── KEY FIX: Use enableHighAccuracy:false first so permission popup
+  //    appears instantly on mobile. Then upgrade to high accuracy. ──
   const handleGetCurrentLocation = () => {
     setError(null);
     setLoading(true);
@@ -156,38 +172,51 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const position = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        console.log('✅ Current location:', position);
+    const applyLocation = async (lat, lng) => {
+      console.log('✅ Location received:', lat, lng);
+      if (map && marker) {
+        map.flyTo([lat, lng], 16, { duration: 1.5 });
+        marker.setLatLng([lat, lng]);
+        await handleLocationChange(lat, lng);
+      }
+      setLoading(false);
+    };
 
-        if (map && marker) {
-          map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
-          marker.setLatLng([position.lat, position.lng]);
-          await handleLocationChange(position.lat, position.lng);
-        }
-        setLoading(false);
+    const showError = (err) => {
+      console.error('❌ Location error:', err);
+      let msg = 'Unable to get your location. Please try again.';
+      if (err.code === 1) msg = 'Location permission denied. Please enable location access in your browser or device settings.';
+      if (err.code === 2) msg = 'Location unavailable. Please check your device GPS is turned on.';
+      if (err.code === 3) msg = 'Location request timed out. Please try again.';
+      setError(msg);
+      setLoading(false);
+    };
+
+    // Step 1: Low accuracy — triggers permission popup IMMEDIATELY on mobile
+    // maximumAge:30000 means accept a cached position up to 30s old (very fast)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        // Got a quick position — use it immediately
+        applyLocation(pos.coords.latitude, pos.coords.longitude);
       },
       (err) => {
-        console.error('❌ Current location error:', err);
-        let errorMessage = 'Unable to get your location.';
         if (err.code === 1) {
-          errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
-        } else if (err.code === 2) {
-          errorMessage = 'Location unavailable. Please check your device settings.';
-        } else if (err.code === 3) {
-          errorMessage = 'Location request timed out. Please try again.';
+          // Permission denied — no point retrying
+          showError(err);
+          return;
         }
-        setError(errorMessage);
-        setLoading(false);
+        // Timeout or unavailable on low accuracy — try high accuracy
+        console.warn('⚠️ Low accuracy failed, trying high accuracy...');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => applyLocation(pos.coords.latitude, pos.coords.longitude),
+          showError,
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        enableHighAccuracy: false, // ← critical: shows popup instantly on mobile
+        timeout: 8000,
+        maximumAge: 30000,
       }
     );
   };
