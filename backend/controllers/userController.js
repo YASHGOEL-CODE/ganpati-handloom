@@ -1,6 +1,5 @@
 const User = require('../models/User');
 const Product = require('../models/Product');
-const User = require('../models/User');
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
