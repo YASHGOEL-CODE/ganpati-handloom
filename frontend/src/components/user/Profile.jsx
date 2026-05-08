@@ -14,6 +14,7 @@ import {
   FiShield, FiChevronRight, FiClock, FiTruck, FiStar, FiShoppingCart,
 } from 'react-icons/fi';
 import { isValidEmail, isValidPhone } from '../../utils/helpers';
+import ChangePasswordModal from './ChangePasswordModal';
 
 const Profile = () => {
   const [searchParams] = useSearchParams();
@@ -49,6 +50,9 @@ const Profile = () => {
     label: 'Home', fullName: user?.fullName || '', phone: user?.phone || '',
     houseStreet: '', areaLandmark: '', city: '', state: '', pincode: '', isDefault: false,
   });
+
+  // ── ADDED: Change password modal state ──
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   // ── All useEffects completely unchanged ──
   useEffect(() => {
@@ -894,18 +898,35 @@ const Profile = () => {
                     Account Actions
                   </p>
                   <div className="pr-actions-section">
-                    <div className="pr-action-item" onClick={() => alert('Change password coming soon')}>
+                    {/* REPLACE with: */}
+                    <div
+                      className="pr-action-item"
+                      onClick={() => {
+                        if (user?.googleId) {
+                          alert('Your password is managed through your Google account.');
+                          return;
+                        }
+                        setShowPasswordModal(true);
+                      }}
+                    >
                       <div className="pr-action-left">
                         <div className="pr-action-ico" style={{ background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.22)' }}>
                           <FiLock size={16} color="#818cf8" />
                         </div>
                         <div>
                           <p className="pr-action-title">Change Password</p>
-                          <p className="pr-action-sub">Update your account password</p>
+                          <p className="pr-action-sub">
+                            {user?.googleId ? 'Managed by Google' : 'Update your account password'}
+                          </p>
                         </div>
                       </div>
                       <FiChevronRight size={16} className="pr-action-arrow" />
                     </div>
+
+                    {/* ── ADDED: Modal ── */}
+                    {showPasswordModal && (
+                      <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+                    )}
 
                     {logout && (
                       <div className="pr-action-item" onClick={() => logout()}>

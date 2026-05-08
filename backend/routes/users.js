@@ -7,6 +7,7 @@ const {
   updateAddress,
   deleteAddress,
   getRecentlyViewed,
+  changePassword, // ── ADDED ──
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 
@@ -16,5 +17,6 @@ router.post('/addresses', protect, addAddress);
 router.put('/addresses/:addressId', protect, updateAddress);
 router.delete('/addresses/:addressId', protect, deleteAddress);
 router.get('/recently-viewed', protect, getRecentlyViewed);
+router.put('/change-password', protect, changePassword); // ── ADDED ──
 
 module.exports = router;

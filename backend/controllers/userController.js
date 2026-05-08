@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Product = require('../models/Product');
+const User = require('../models/User');
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -166,6 +167,73 @@ const getRecentlyViewed = async (req, res) => {
   }
 };
 
+// @desc    Change password
+// @route   PUT /api/users/change-password
+// @access  Private
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate fields
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide current and new password',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters',
+      });
+    }
+
+    // Get user with password
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Block Google users
+    if (user.googleId && (!user.password || user.password.startsWith('google-oauth-'))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Your password is managed through your Google account.',
+      });
+    }
+
+    // Verify current password
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect',
+      });
+    }
+
+    // Prevent same password
+    const isSame = await user.matchPassword(newPassword);
+    if (isSame) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password',
+      });
+    }
+
+    // Save — pre-save hook hashes it automatically
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Password updated successfully' });
+
+  } catch (error) {
+    console.error('❌ Change password error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update password' });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
@@ -173,4 +241,5 @@ module.exports = {
   updateAddress,
   deleteAddress,
   getRecentlyViewed,
+  changePassword,
 };
