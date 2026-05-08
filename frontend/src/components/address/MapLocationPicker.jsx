@@ -98,7 +98,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // ── FIXED: replaced hardcoded localhost with env variable ──
   const reverseGeocode = async (lat, lng) => {
     try {
       console.log('🔄 Reverse geocoding:', { lat, lng });
@@ -160,104 +159,110 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
-  // ── FIXED: handleGetCurrentLocation — mobile reliable geolocation ──
   const handleGetCurrentLocation = async () => {
-  if (locationLoading) return; // prevent multiple clicks
+    if (locationLoading) return;
 
-  setError(null);
-  setLocationLoading(true);
+    setError(null);
+    setLocationLoading(true);
 
-  // HTTPS check
-  if (
-    window.location.protocol !== 'https:' &&
-    window.location.hostname !== 'localhost'
-  ) {
-    setError('Location access requires HTTPS.');
-    setLocationLoading(false);
-    return;
-  }
-
-  if (!navigator.geolocation) {
-    setError('Geolocation is not supported.');
-    setLocationLoading(false);
-    return;
-  }
-
-  // 🔥 IMPORTANT: small delay (fixes mobile issue)
-  await new Promise(resolve => setTimeout(resolve, 300));
-
-  const onSuccess = async (pos) => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-
-    console.log('✅ Location:', lat, lng);
-
-    if (map && marker) {
-      map.flyTo([lat, lng], 16, { duration: 1.5 });
-      marker.setLatLng([lat, lng]);
-      await handleLocationChange(lat, lng);
+    if (
+      window.location.protocol !== 'https:' &&
+      window.location.hostname !== 'localhost'
+    ) {
+      setError('Location access requires HTTPS.');
+      setLocationLoading(false);
+      return;
     }
 
-    setLocationLoading(false);
-  };
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported.');
+      setLocationLoading(false);
+      return;
+    }
 
-  const onError = (err) => {
-    console.error('❌ Location error:', err);
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-    let msg = 'Unable to get location';
+    const onSuccess = async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
 
-    if (err.code === 1)
-      msg = 'Permission denied. Enable location in browser & device settings.';
-    else if (err.code === 2)
-      msg = 'Location unavailable. Turn ON GPS.';
-    else if (err.code === 3)
-      msg = 'Location timeout. Try again.';
+      console.log('✅ Location:', lat, lng);
 
-    setError(msg);
-    setLocationLoading(false);
-  };
-
-  // Step 1: fast location
-  navigator.geolocation.getCurrentPosition(
-    onSuccess,
-    (err) => {
-      if (err.code === 1) {
-        onError(err);
-        return;
+      if (map && marker) {
+        map.flyTo([lat, lng], 16, { duration: 1.5 });
+        marker.setLatLng([lat, lng]);
+        await handleLocationChange(lat, lng);
       }
 
-      // Step 2: retry with GPS
-      navigator.geolocation.getCurrentPosition(
-        onSuccess,
-        onError,
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
+      setLocationLoading(false);
+    };
+
+    // ── CHANGED: improved user-friendly error messages ──
+    const buildErrorMessage = (err) => {
+      if (err.code === 1) {
+        return 'Please allow location permission to use current location.';
+      }
+      if (err.code === 2) {
+        return 'Please turn on your device location/GPS to use current location.';
+      }
+      if (err.code === 3) {
+        return 'Please turn on your device location/GPS to use current location.';
+      }
+      return 'Please turn on your device location/GPS to use current location.';
+    };
+    // ── END CHANGED ──
+
+    const onError = (err) => {
+      console.error('❌ Location error:', err);
+      setError(buildErrorMessage(err));
+      setLocationLoading(false);
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      (err) => {
+        if (err.code === 1) {
+          onError(err);
+          return;
         }
-      );
-    },
-    {
-      enableHighAccuracy: false,
-      timeout: 8000,
-      maximumAge: 60000,
-    }
-  );
-};
-  // ── END FIXED ──
+
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          onError,
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          }
+        );
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 8000,
+        maximumAge: 60000,
+      }
+    );
+  };
 
   return (
     <div className="w-full h-full flex flex-col">
+
       {/* Use Current Location Button */}
       <button
         onClick={handleGetCurrentLocation}
         disabled={locationLoading}
         type="button"
-        className="mb-4 flex items-center justify-center gap-2 bg-saffron-600 text-white px-6 py-3 rounded-lg hover:bg-saffron-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
+        className="mb-2 flex items-center justify-center gap-2 bg-saffron-600 text-white px-6 py-3 rounded-lg hover:bg-saffron-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
       >
         <FiNavigation className="w-5 h-5" />
         {locationLoading ? 'Getting Your Location...' : 'Use My Current Location'}
       </button>
+
+      {/* ── ADDED: GPS instruction below button ── */}
+      <p className="text-xs text-gray-400 mb-3 text-center">
+        Please make sure your phone GPS/location is turned ON
+      </p>
+      {/* ── END ADDED ── */}
 
       {/* Error Alert */}
       {error && (
@@ -267,7 +272,11 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
             <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">
               Location Error
             </p>
-            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            {/* ── CHANGED: added leading-relaxed for better readability ── */}
+            <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">
+              {error}
+            </p>
+            {/* ── END CHANGED ── */}
           </div>
         </div>
       )}
