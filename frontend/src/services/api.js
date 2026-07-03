@@ -118,7 +118,8 @@ export const userAPI = {
   updateAddress: (id, addressData) => api.put(`/users/addresses/${id}`, addressData),
   deleteAddress: (id) => api.delete(`/users/addresses/${id}`),
   getRecentlyViewed: () => api.get('/users/recently-viewed'),
-  changePassword: (data) => api.put('/users/change-password', data), // ── ADDED ──
+  changePassword: (data) => api.put('/users/change-password', data), 
+  deleteAccount: () => api.delete('/users/delete-account'),
 };
 
 // Orders API

@@ -23,14 +23,12 @@ const Navbar = () => {
   const [searchOpen,     setSearchOpen]     = useState(false);
   const [scrolled,       setScrolled]       = useState(false);
 
-  // ── ADDED: Notification state ──
-  const [notifOpen,         setNotifOpen]         = useState(false);
-  const [notifications,     setNotifications]     = useState([]);
-  const [unreadCount,       setUnreadCount]       = useState(0);
-  const [notifLoading,      setNotifLoading]      = useState(false);
+  const [notifOpen,     setNotifOpen]     = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount,   setUnreadCount]   = useState(0);
+  const [notifLoading,  setNotifLoading]  = useState(false);
   const notifRef = useRef(null);
 
-  // ── All original effects unchanged ──
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -58,7 +56,6 @@ const Navbar = () => {
     return () => { document.body.style.overflow = ''; };
   }, [searchOpen]);
 
-  // ── ADDED: Close notif dropdown on outside click ──
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (notifOpen && notifRef.current && !notifRef.current.contains(e.target)) {
@@ -69,23 +66,19 @@ const Navbar = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [notifOpen]);
 
-  // ── ADDED: Fetch unread count (admin only) — polls every 30s ──
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
-
     const fetchUnreadCount = async () => {
       try {
         const res = await notificationsAPI.getUnreadCount();
         setUnreadCount(res.data.count || 0);
       } catch (_) {}
     };
-
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
-  // ── ADDED: Fetch notifications when bell is opened ──
   const handleBellClick = async () => {
     if (notifOpen) { setNotifOpen(false); return; }
     setNotifOpen(true);
@@ -101,7 +94,6 @@ const Navbar = () => {
     }
   };
 
-  // ── ADDED: Mark single notification as read ──
   const handleMarkRead = async (notifId) => {
     try {
       await notificationsAPI.markAsRead(notifId);
@@ -112,7 +104,6 @@ const Navbar = () => {
     } catch (_) {}
   };
 
-  // ── ADDED: Mark all as read ──
   const handleMarkAllRead = async () => {
     try {
       await notificationsAPI.markAllRead();
@@ -121,7 +112,6 @@ const Navbar = () => {
     } catch (_) {}
   };
 
-  // ── ADDED: Format time ago ──
   const timeAgo = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins  = Math.floor(diff / 60000);
@@ -133,16 +123,10 @@ const Navbar = () => {
     return `${days}d ago`;
   };
 
-  // ── ADDED: Notification type color ──
   const notifColor = (type) => {
     const map = {
-      contact: '#f97316',
-      order:   '#3b82f6',
-      payment: '#22c55e',
-      stock:   '#f59e0b',
-      user:    '#a855f7',
-      system:  '#6b7280',
-      offer:   '#ec4899',
+      contact: '#f97316', order: '#3b82f6', payment: '#22c55e',
+      stock: '#f59e0b', user: '#a855f7', system: '#6b7280', offer: '#ec4899',
     };
     return map[type] || '#6b7280';
   };
@@ -180,12 +164,14 @@ const Navbar = () => {
           transition: background 0.3s ease, box-shadow 0.3s ease;
           font-family: 'DM Sans', sans-serif;
         }
+
+        /* ── CHANGED: removed backdrop-filter — was creating stacking context
+           trapping fixed/portal children. Using high-opacity bg instead. ── */
         .navbar-root.scrolled {
-          background: rgba(10,15,30,0.92);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: rgba(10, 15, 30, 0.97);
           box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.05);
         }
+
         .navbar-root::after {
           content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
           background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0.5) 40%, rgba(234,88,12,0.5) 60%, transparent 100%);
@@ -251,9 +237,10 @@ const Navbar = () => {
         .nav-chevron { color: rgba(255,255,255,0.35); transition: transform 0.22s ease; }
         .nav-chevron.open { transform: rotate(180deg); }
 
+        /* ── CHANGED: removed backdrop-filter from nav-dropdown ── */
         .nav-dropdown {
           position: absolute; right: 0; top: calc(100% + 10px); width: 240px;
-          background: rgba(15,23,42,0.97); backdrop-filter: blur(20px);
+          background: rgba(15, 23, 42, 0.99);
           border: 1px solid rgba(255,255,255,0.09); border-radius: 16px;
           box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
           padding: 6px 0; animation: dropIn 0.18s ease; overflow: hidden; z-index: 100;
@@ -284,11 +271,11 @@ const Navbar = () => {
         .nav-dropdown-item.logout:hover { background: rgba(248,113,113,0.07); color: #fca5a5; }
         .nav-dropdown-item.logout .dd-icon { background: rgba(248,113,113,0.10); }
 
-        /* ── NOTIFICATION DROPDOWN ── */
+        /* ── CHANGED: removed backdrop-filter from notif-dropdown ── */
         .notif-dropdown {
           position: absolute; right: 0; top: calc(100% + 10px);
           width: 360px;
-          background: rgba(10,15,30,0.98); backdrop-filter: blur(24px);
+          background: rgba(10, 15, 30, 0.99);
           border: 1px solid rgba(255,255,255,0.09); border-radius: 18px;
           box-shadow: 0 24px 64px rgba(0,0,0,0.60), 0 0 0 1px rgba(255,255,255,0.04);
           overflow: hidden; z-index: 100;
@@ -309,16 +296,14 @@ const Navbar = () => {
           display: flex; align-items: center; gap: 7px;
         }
         .notif-unread-pill {
-          font-size: 10px; font-weight: 800; padding: 2px 7px;
-          border-radius: 999px;
+          font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px;
           background: rgba(234,88,12,0.18); color: #fb923c;
           border: 1px solid rgba(234,88,12,0.28);
         }
         .notif-mark-all {
           font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.36);
           background: none; border: none; cursor: pointer;
-          transition: color 0.18s; font-family: 'DM Sans', sans-serif;
-          padding: 0;
+          transition: color 0.18s; font-family: 'DM Sans', sans-serif; padding: 0;
         }
         .notif-mark-all:hover { color: #fb923c; }
         .notif-list {
@@ -332,8 +317,7 @@ const Navbar = () => {
           display: flex; align-items: flex-start; gap: 11px;
           padding: 12px 16px; cursor: pointer;
           border-bottom: 1px solid rgba(255,255,255,0.04);
-          transition: background 0.18s;
-          position: relative;
+          transition: background 0.18s; position: relative;
         }
         .notif-item:last-child { border-bottom: none; }
         .notif-item:hover { background: rgba(255,255,255,0.04); }
@@ -341,8 +325,7 @@ const Navbar = () => {
         .notif-item.unread:hover { background: rgba(249,115,22,0.08); }
         .notif-dot {
           position: absolute; top: 16px; right: 14px;
-          width: 7px; height: 7px; border-radius: 50%;
-          background: #f97316;
+          width: 7px; height: 7px; border-radius: 50%; background: #f97316;
           box-shadow: 0 0 6px rgba(249,115,22,0.60);
         }
         .notif-type-dot {
@@ -353,18 +336,14 @@ const Navbar = () => {
         .notif-body { flex: 1; min-width: 0; }
         .notif-title {
           font-size: 13px; font-weight: 700; color: #f1f5f9;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-          margin-bottom: 3px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;
         }
         .notif-msg {
           font-size: 12px; color: rgba(255,255,255,0.42); line-height: 1.55;
           display: -webkit-box; -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical; overflow: hidden;
-          margin-bottom: 4px;
+          -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 4px;
         }
-        .notif-time {
-          font-size: 11px; color: rgba(255,255,255,0.25); font-weight: 500;
-        }
+        .notif-time { font-size: 11px; color: rgba(255,255,255,0.25); font-weight: 500; }
         .notif-empty {
           display: flex; flex-direction: column; align-items: center; justify-content: center;
           padding: 36px 20px; gap: 10px;
@@ -373,13 +352,10 @@ const Navbar = () => {
         .notif-empty-icon {
           width: 48px; height: 48px; border-radius: 14px;
           background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 20px;
+          display: flex; align-items: center; justify-content: center; font-size: 20px;
         }
         .notif-footer {
-          padding: 10px 16px;
-          border-top: 1px solid rgba(255,255,255,0.07);
-          text-align: center;
+          padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.07); text-align: center;
         }
         .notif-footer a {
           font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.35);
@@ -410,8 +386,9 @@ const Navbar = () => {
         }
         .nav-signup-btn:hover { transform: translateY(-1px) scale(1.03); box-shadow: 0 7px 22px rgba(234,88,12,0.45); filter: brightness(1.08); }
 
+        /* ── CHANGED: removed backdrop-filter from nav-mobile ── */
         .nav-mobile {
-          background: rgba(10,15,30,0.97); backdrop-filter: blur(20px);
+          background: rgba(10, 15, 30, 0.99);
           border-top: 1px solid rgba(255,255,255,0.07);
           animation: mobileIn 0.2s ease;
         }
@@ -472,7 +449,7 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
 
-            {/* LOGO — unchanged */}
+            {/* LOGO */}
             <Link to="/" className="flex items-center gap-2 group z-50" onClick={() => setMobileMenuOpen(false)}>
               <span className="text-3xl transform group-hover:scale-110 transition-transform duration-200"
                 style={{ filter:'drop-shadow(0 0 8px rgba(249,115,22,0.40))' }}>🕉️</span>
@@ -482,7 +459,7 @@ const Navbar = () => {
               </span>
             </Link>
 
-            {/* DESKTOP NAV — unchanged */}
+            {/* DESKTOP NAV */}
             <div className="hidden md:flex items-center gap-7">
               {[
                 { to: '/products',    label: 'Products' },
@@ -497,24 +474,24 @@ const Navbar = () => {
             {/* RIGHT ICONS */}
             <div className="flex items-center gap-1">
 
-              {/* Search — unchanged */}
+              {/* Search */}
               <button onClick={() => setSearchOpen(true)} className="nav-icon-btn" aria-label="Search">
                 <FiSearch size={19} />
               </button>
 
-              {/* Wishlist — unchanged */}
+              {/* Wishlist */}
               <Link to="/wishlist" className="nav-icon-btn heart relative" aria-label="Wishlist">
                 <FiHeart size={19} />
                 {wishlistItemsCount > 0 && <span className="nav-badge red">{wishlistItemsCount}</span>}
               </Link>
 
-              {/* Cart — unchanged */}
+              {/* Cart */}
               <Link to="/cart" className="nav-icon-btn relative" aria-label="Cart">
                 <FiShoppingCart size={19} />
                 {cartItemsCount > 0 && <span className="nav-badge">{cartItemsCount}</span>}
               </Link>
 
-              {/* ── ADDED: Notification Bell — admin only ── */}
+              {/* Notification Bell — admin only */}
               {user && user.role === 'admin' && (
                 <div className="relative" ref={notifRef}>
                   <button
@@ -532,7 +509,6 @@ const Navbar = () => {
 
                   {notifOpen && (
                     <div className="notif-dropdown">
-                      {/* Header */}
                       <div className="notif-header">
                         <span className="notif-header-title">
                           Notifications
@@ -547,7 +523,6 @@ const Navbar = () => {
                         )}
                       </div>
 
-                      {/* List */}
                       <div className="notif-list">
                         {notifLoading ? (
                           <div className="notif-loading">
@@ -568,14 +543,12 @@ const Navbar = () => {
                               contact: '✉️', order: '📦', payment: '💳',
                               stock: '⚠️', user: '👤', system: '⚙️', offer: '🎁',
                             }[notif.type] || '🔔';
-
                             return (
                               <div
                                 key={notif._id}
                                 className={`notif-item${!notif.isRead ? ' unread' : ''}`}
                                 onClick={() => !notif.isRead && handleMarkRead(notif._id)}
                               >
-                                {/* Type icon */}
                                 <div
                                   className="notif-type-dot"
                                   style={{
@@ -585,15 +558,11 @@ const Navbar = () => {
                                 >
                                   {typeEmoji}
                                 </div>
-
-                                {/* Body */}
                                 <div className="notif-body">
                                   <p className="notif-title">{notif.title}</p>
                                   <p className="notif-msg">{notif.message}</p>
                                   <p className="notif-time">{timeAgo(notif.createdAt)}</p>
                                 </div>
-
-                                {/* Unread dot */}
                                 {!notif.isRead && <div className="notif-dot" />}
                               </div>
                             );
@@ -601,7 +570,6 @@ const Navbar = () => {
                         )}
                       </div>
 
-                      {/* Footer */}
                       {notifications.length > 0 && (
                         <div className="notif-footer">
                           <Link to="/admin" onClick={() => setNotifOpen(false)}>
@@ -613,9 +581,8 @@ const Navbar = () => {
                   )}
                 </div>
               )}
-              {/* ── End notification bell ── */}
 
-              {/* User menu / Auth — unchanged */}
+              {/* User menu / Auth */}
               {user ? (
                 <div className="relative user-menu-container">
                   <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="nav-user-btn">
@@ -662,7 +629,7 @@ const Navbar = () => {
                 </div>
               )}
 
-              {/* Hamburger — unchanged */}
+              {/* Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="nav-icon-btn"
@@ -675,7 +642,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* MOBILE MENU — unchanged */}
+        {/* MOBILE MENU */}
         {mobileMenuOpen && (
           <div className="nav-mobile md:hidden">
             <div className="px-4 py-4">
@@ -702,7 +669,7 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* SEARCH MODAL — unchanged */}
+      {/* SEARCH MODAL */}
       {searchOpen && (
         <div className="search-modal-bg" onClick={(e) => e.target === e.currentTarget && setSearchOpen(false)}>
           <div className="search-modal-card">

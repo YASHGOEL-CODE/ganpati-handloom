@@ -233,6 +233,41 @@ const changePassword = async (req, res) => {
   }
 };
 
+// @desc    Delete own account
+// @route   DELETE /api/users/delete-account
+// @access  Private
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Delete user's related data
+    await Promise.all([
+      // Delete addresses
+      require('../models/Address').deleteMany({ user: userId }),
+      // Delete orders (optional — comment out if you want to keep order history)
+      // require('../models/Order').deleteMany({ user: userId }),
+      // Delete wishlist
+      require('../models/Wishlist').deleteMany({ user: userId }),
+      // Delete notifications
+      require('../models/Notification').deleteMany({ userId }),
+    ]);
+
+    // Finally delete the user
+    await User.findByIdAndDelete(userId);
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully',
+    });
+  } catch (error) {
+    console.error('❌ Delete account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete account. Please try again.',
+    });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
@@ -241,4 +276,5 @@ module.exports = {
   deleteAddress,
   getRecentlyViewed,
   changePassword,
+  deleteAccount,
 };
