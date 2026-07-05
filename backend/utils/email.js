@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -116,8 +118,14 @@ const sendVerificationEmail = async (user, verificationToken) => {
     `,
   };
 
-  try {
-    await transporter.sendMail(mailOptions);
+  // REPLACE with:
+try {
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'Ganpati Handloom <onboarding@resend.dev>',
+      to: user.email,
+      subject: mailOptions.subject,
+      html: mailOptions.html,
+    });
     console.log('✅ Verification email sent to:', user.email);
     return true;
   } catch (error) {
