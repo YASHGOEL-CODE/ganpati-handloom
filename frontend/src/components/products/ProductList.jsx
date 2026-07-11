@@ -183,10 +183,10 @@ const ProductList = () => {
             <button className="pl-search-btn" onClick={handleSearch}>Search</button>
             <select className="pl-sort" value={sort} onChange={e => setSort(e.target.value)}>
               <option value="">Sort: Default</option>
-              <option value="price_asc">Price: Low → High</option>
-              <option value="price_desc">Price: High → Low</option>
+              <option value="price-low">Price: Low → High</option>
+              <option value="price-high">Price: High → Low</option>
               <option value="newest">Newest First</option>
-              <option value="rating">Best Rated</option>
+              <option value="popular">Best Rated</option>
             </select>
             <div className="pl-view-toggle">
               <button className={`pl-view-btn ${viewMode==='grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}><FiGrid size={15}/></button>
