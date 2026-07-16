@@ -98,24 +98,77 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
     }
   };
 
+  // ── CHANGED: Added Nominatim fallback for correct city/state/pincode ──
   const reverseGeocode = async (lat, lng) => {
     try {
       console.log('🔄 Reverse geocoding:', { lat, lng });
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: lat, longitude: lng }),
-      });
+      // Step 1: Try backend first
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude: lat, longitude: lng }),
+        });
 
-      const data = await response.json();
-      console.log('📍 Geocoding response:', data);
+        const data = await response.json();
+        console.log('📍 Backend geocoding response:', data);
 
-      if (!data.success) {
-        throw new Error(data.message || 'Geocoding failed');
+        // Only use backend result if it has city AND state AND pincode
+        if (
+          data.success &&
+          data.address &&
+          data.address.city &&
+          data.address.state &&
+          data.address.pincode
+        ) {
+          return data.address;
+        }
+
+        console.warn('⚠️ Backend returned incomplete address, falling back to Nominatim...');
+      } catch (backendErr) {
+        console.warn('⚠️ Backend geocoding failed, falling back to Nominatim:', backendErr.message);
       }
 
-      return data.address;
+      // Step 2: Direct Nominatim call as fallback
+      const nominatimRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`,
+        {
+          headers: {
+            'User-Agent': 'GanpatiHandloom/1.0',
+          },
+        }
+      );
+      const nominatimData = await nominatimRes.json();
+      console.log('📍 Nominatim response:', nominatimData);
+
+      const addr = nominatimData.address || {};
+
+      const city =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.suburb ||
+        addr.county ||
+        addr.district ||
+        '';
+
+      const area =
+        addr.suburb ||
+        addr.neighbourhood ||
+        addr.locality ||
+        addr.quarter ||
+        '';
+
+      return {
+        formattedAddress: nominatimData.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+        street: addr.road || addr.street || addr.pedestrian || '',
+        area: area,
+        city: city,
+        state: addr.state || '',
+        pincode: addr.postcode || '',
+        country: addr.country || 'India',
+      };
 
     } catch (error) {
       console.error('❌ Geocoding error:', error);
@@ -130,6 +183,7 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       };
     }
   };
+  // ── END CHANGED ──
 
   const handleLocationChange = async (lat, lng) => {
     try {
@@ -197,7 +251,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       setLocationLoading(false);
     };
 
-    // ── CHANGED: improved user-friendly error messages ──
     const buildErrorMessage = (err) => {
       if (err.code === 1) {
         return 'Please allow location permission to use current location.';
@@ -210,7 +263,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       }
       return 'Please turn on your device location/GPS to use current location.';
     };
-    // ── END CHANGED ──
 
     const onError = (err) => {
       console.error('❌ Location error:', err);
@@ -258,11 +310,10 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
         {locationLoading ? 'Getting Your Location...' : 'Use My Current Location'}
       </button>
 
-      {/* ── ADDED: GPS instruction below button ── */}
+      {/* GPS instruction below button */}
       <p className="text-xs text-gray-400 mb-3 text-center">
         Please make sure your phone GPS/location is turned ON
       </p>
-      {/* ── END ADDED ── */}
 
       {/* Error Alert */}
       {error && (
@@ -272,11 +323,9 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
             <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">
               Location Error
             </p>
-            {/* ── CHANGED: added leading-relaxed for better readability ── */}
             <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">
               {error}
             </p>
-            {/* ── END CHANGED ── */}
           </div>
         </div>
       )}
