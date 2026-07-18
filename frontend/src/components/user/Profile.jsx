@@ -1439,8 +1439,11 @@ const Profile = () => {
     setMapLocation(location);
     setAddressFormData((prev) => ({
       ...prev, fullName: prev.fullName, phone: prev.phone, label: prev.label, isDefault: prev.isDefault,
-      houseStreet: location.street || prev.houseStreet, areaLandmark: location.area || prev.areaLandmark,
-      city: location.city || prev.city, state: location.state || prev.state, pincode: location.pincode || prev.pincode,
+      houseStreet: location.street || prev.houseStreet,
+      areaLandmark: location.area,
+      city: location.city,
+      state: location.state,
+      pincode: location.pincode,
     }));
   };
 

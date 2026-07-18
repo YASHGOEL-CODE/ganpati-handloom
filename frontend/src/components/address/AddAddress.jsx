@@ -36,10 +36,10 @@ const AddAddress = () => {
     setFormData((prev) => ({
       ...prev,
       houseStreet: location.street || prev.houseStreet,
-      areaLandmark: location.area || prev.areaLandmark,
-      city: location.city || prev.city,
-      state: location.state || prev.state,
-      pincode: location.pincode || prev.pincode,
+      areaLandmark: location.area,
+      city: location.city,
+      state: location.state,
+      pincode: location.pincode,
     }));
   };
 
