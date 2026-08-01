@@ -101,36 +101,8 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
   // ── CHANGED: Added Nominatim fallback for correct city/state/pincode ──
   const reverseGeocode = async (lat, lng) => {
     try {
-      console.log('🔄 Reverse geocoding:', { lat, lng });
+      console.log('🔄 Reverse geocoding via Nominatim:', { lat, lng });
 
-      // Step 1: Try backend first
-      try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/geocoding/reverse`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ latitude: lat, longitude: lng }),
-        });
-
-        const data = await response.json();
-        console.log('📍 Backend geocoding response:', data);
-
-        // Only use backend result if it has city AND state AND pincode
-        if (
-          data.success &&
-          data.address &&
-          data.address.city &&
-          data.address.state &&
-          data.address.pincode
-        ) {
-          return data.address;
-        }
-
-        console.warn('⚠️ Backend returned incomplete address, falling back to Nominatim...');
-      } catch (backendErr) {
-        console.warn('⚠️ Backend geocoding failed, falling back to Nominatim:', backendErr.message);
-      }
-
-      // Step 2: Direct Nominatim call as fallback
       const nominatimRes = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`,
         {
@@ -148,7 +120,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
         addr.city ||
         addr.town ||
         addr.village ||
-        addr.suburb ||
         addr.county ||
         addr.district ||
         '';
@@ -158,6 +129,7 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
         addr.neighbourhood ||
         addr.locality ||
         addr.quarter ||
+        addr.residential ||
         '';
 
       return {
@@ -183,8 +155,6 @@ const MapLocationPicker = ({ onLocationSelect, initialLocation }) => {
       };
     }
   };
-  // ── END CHANGED ──
-
   const handleLocationChange = async (lat, lng) => {
     try {
       setGeocoding(true);
